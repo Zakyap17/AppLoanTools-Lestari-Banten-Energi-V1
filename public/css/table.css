@@ -1,0 +1,72 @@
+/* ===============================
+   TABLE BASE
+================================ */
+
+.tools-table {
+    width: 100%;
+    table-layout: auto;
+}
+
+/* default cell */
+.tools-table th,
+.tools-table td {
+    white-space: nowrap;
+    vertical-align: middle;
+}
+
+/* ===============================
+   SIZE HELPERS
+================================ */
+
+.tools-table th.small,
+.tools-table td.small {
+    width: 60px;
+    text-align: center;
+}
+
+/* ===============================
+   LONG TEXT
+================================ */
+
+.tools-table th.long-text,
+.tools-table td.long-text {
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ===============================
+   RESPONSIVE FIX
+================================ */
+
+.table-responsive {
+    overflow-x: auto;
+}
+
+/* Expand button (Loan detail) */
+.btn-expand {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border-radius: 6px;
+    border: 1px solid #cfd8dc;
+    background: #f8f9fa;
+    color: #455a64;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.btn-expand:hover {
+    background: #e3f2fd;
+    border-color: #90caf9;
+    color: #1e88e5;
+}
+
+.btn-expand.active {
+    background: #e3f2fd;
+    border-color: #64b5f6;
+    color: #1565c0;
+}
