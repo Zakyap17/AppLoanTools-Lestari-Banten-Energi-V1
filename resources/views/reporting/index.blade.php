@@ -376,7 +376,6 @@
                             <th>UOM</th>
                             <th>Qty</th>
                             <th>Status</th>
-                            <th>Input Date</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -406,7 +405,6 @@
                                             {{ $statusLabel }}
                                         </span>
                                     </td>
-                                    <td>{{ $item->created_at ? $item->created_at->format('d M Y H:i') : '-' }}</td>
                                 </tr>
                             @empty
                                 <tr>
@@ -681,20 +679,21 @@
                                 <tr>
                                     <td>{{ $index + 1 }}</td>
                                     <td>{{ $item->created_at ? $item->created_at->format('d M Y') : '-' }}</td>
-                                    <td>{{ $item->tool->location->name ?? '-' }}</td>
-                                    <td>{{ $item->tool->rack->code ?? '-' }}</td>
-                                    <td class="text-primary fw-bold">{{ $item->tool->code ?? '-' }}</td>
-                                    <td>{{ $item->tool->name ?? '-' }}</td>
+                                    <td>{{ $item->tool?->po_number ?? '-' }}</td>
+                                    <td>{{ $item->tool?->location?->name ?? '-' }}</td>
+                                    <td>{{ $item->tool?->rack?->code ?? '-' }}</td>
+                                    <td class="text-primary fw-bold">{{ $item->tool?->code ?? '-' }}</td>
+                                    <td>{{ $item->tool?->name ?? '-' }}</td>
                                     <td>{{ $item->serial_number ?? '-' }}</td>
                                     <td>{{ $item->condition ?? 'Good' }}</td>
                                     <td class="text-center">1</td>
                                     <td class="text-center">
-                                        {{ $item->createdBy->name ?? '-' }}
+                                        {{ $item->createdBy?->name ?? '-' }}
                                     </td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="10">
+                                    <td colspan="11">
                                         <div class="empty-state-table">
                                             <i class="bi bi-inbox"></i>
                                             <h5>No Receive History Found</h5>
@@ -826,9 +825,11 @@
                         dataType: 'json',
                         delay: 250, // Reduced delay for faster response
                         data: function (params) {
+                            console.log('Searching for:', params.term);
                             return { q: params.term };
                         },
                         processResults: function (data) {
+                            console.log('Search results received:', data);
                             return {
                                 results: $.map(data.results, function (item) {
                                     return {
@@ -840,6 +841,7 @@
                         },
                         cache: true
                     }
+
                 });
             }
 

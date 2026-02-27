@@ -218,6 +218,7 @@ class ReportingCenterController extends Controller
                     $q->whereHas('tool', function ($sub) use ($search) {
                         $sub->where('code', 'ilike', "%{$search}%")
                             ->orWhere('name', 'ilike', "%{$search}%")
+                            ->orWhere('po_number', 'ilike', "%{$search}%")
                             ->orWhereHas('location', function ($loc) use ($search) {
                                 $loc->where('name', 'ilike', "%{$search}%");
                             })
@@ -337,7 +338,7 @@ class ReportingCenterController extends Controller
             }
 
             $items = $query->latest()->get();
-            $headers = ['No', 'Storage', 'Bin', 'Tool No', 'Description', 'Asset No (Serial)', 'UOM', 'Qty', 'Status', 'Input Date'];
+            $headers = ['No', 'Storage', 'Bin', 'Tool No', 'Description', 'Asset No (Serial)', 'UOM', 'Qty', 'Status'];
 
             foreach ($items as $index => $item) {
                 $status = ucfirst(str_replace('_', ' ', $item->status));
@@ -347,15 +348,14 @@ class ReportingCenterController extends Controller
 
                 $data[] = [
                     $index + 1,
-                    $item->tool->location->name ?? '-',
-                    $item->tool->rack->code ?? '-',
-                    $item->tool->code ?? '-',
-                    $item->tool->name ?? '-',
+                    $item->tool?->location?->name ?? '-',
+                    $item->tool?->rack?->code ?? '-',
+                    $item->tool?->code ?? '-',
+                    $item->tool?->name ?? '-',
                     $item->serial_number ?? '-',
-                    $item->tool->uom ?? '-',
+                    $item->tool?->uom ?? '-',
                     1,
-                    $status,
-                    $item->created_at ? $item->created_at->format('d M Y H:i') : '-'
+                    $status
                 ];
             }
             $filename = 'Stock_Opname_Report_' . date('Y-m-d_His') . '.xlsx';
@@ -513,6 +513,7 @@ class ReportingCenterController extends Controller
                     $q->whereHas('tool', function ($sub) use ($search) {
                         $sub->where('code', 'ilike', "%{$search}%")
                             ->orWhere('name', 'ilike', "%{$search}%")
+                            ->orWhere('po_number', 'ilike', "%{$search}%")
                             ->orWhereHas('location', function ($loc) use ($search) {
                                 $loc->where('name', 'ilike', "%{$search}%");
                             })
@@ -531,20 +532,21 @@ class ReportingCenterController extends Controller
             }
 
             $items = $query->latest()->get();
-            $headers = ['No', 'Receive Date', 'Storage', 'Bin', 'Tool No', 'Description', 'Asset No', 'Condition', 'Qty', 'Receiver'];
+            $headers = ['No', 'Receive Date', 'PO Number', 'Storage', 'Bin', 'Tool No', 'Description', 'Asset No', 'Condition', 'Qty', 'Receiver'];
 
             foreach ($items as $index => $item) {
                 $data[] = [
                     $index + 1,
                     $item->created_at ? $item->created_at->format('d M Y') : '-',
-                    $item->tool->location->name ?? '-',
-                    $item->tool->rack->code ?? '-',
-                    $item->tool->code ?? '-',
-                    $item->tool->name ?? '-',
+                    $item->tool?->po_number ?? '-',
+                    $item->tool?->location?->name ?? '-',
+                    $item->tool?->rack?->code ?? '-',
+                    $item->tool?->code ?? '-',
+                    $item->tool?->name ?? '-',
                     $item->serial_number ?? '-',
                     $item->condition ?? 'Good',
                     1,
-                    $item->createdBy->name ?? '-'
+                    $item->createdBy?->name ?? '-'
                 ];
             }
             $filename = 'Receive_Report_' . date('Y-m-d_His') . '.xlsx';
