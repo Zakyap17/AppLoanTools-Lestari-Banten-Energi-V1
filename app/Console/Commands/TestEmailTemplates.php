@@ -75,7 +75,7 @@ class TestEmailTemplates extends Command
             $loanMock->tool->name = 'Safety Harness Kit';
             $loanMock->tool->code = 'SAFETY-005';
 
-            \Illuminate\Support\Facades\Mail::to($email)->send(new \App\Mail\LoanReminder($loanMock, 3));
+            \Illuminate\Support\Facades\Mail::to($email)->send(new \App\Mail\LoanReminder(collect([$loanMock]), 3));
             $this->info("   -> Sent.");
             if ($type === 'all')
                 sleep(2);

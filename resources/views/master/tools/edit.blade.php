@@ -76,6 +76,16 @@
                             value="{{ old('name', $tool->name) }}" required>
                     </div>
 
+                    <!-- PO Number -->
+                    <div class="col-md-3 text-end align-self-center">
+                        <label class="form-label small fw-bold mb-0">PO Number</label>
+                    </div>
+                    <div class="col-md-9">
+                        <input type="text" name="po_number" class="form-control form-control-sm"
+                            value="{{ old('po_number', $tool->po_number) }}">
+                    </div>
+
+
 
 
                     <!-- Material Type (Connected to Tools Type Master) -->
@@ -191,7 +201,8 @@
                     rackSelect.disabled = true;
 
                     if(locationId) {
-                        fetch(`{{ url('/tools/get-bins') }}/${locationId}`)
+                        const url = "{{ route('tools.get-bins', ':id') }}".replace(':id', locationId);
+                        fetch(url)
                             .then(response => response.json())
                             .then(data => {
                                 rackSelect.innerHTML = '<option value="" selected disabled>- Pilih Bin Location -</option>';

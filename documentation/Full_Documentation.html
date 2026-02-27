@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Genting Energy Group - MASTER OPERATIONAL & TECHNICAL MANUAL V1.0</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&family=JetBrains+Mono:wght@400;700&display=swap');
+
+        :root {
+            --ge-red: #da291c;
+            --ge-black: #000000;
+            --ge-dark: #1a1a1a;
+            --ge-gray: #f4f4f4;
+            --code-bg: #1e1e1e;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            font-size: 11pt;
+            line-height: 1.6;
+            color: #333;
+            margin: 0;
+            background: #e0e0e0;
+        }
+
+        .paper-page {
+            width: 210mm;
+            min-height: 297mm;
+            padding: 20mm;
+            margin: 20mm auto;
+            background: white;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.15);
+            position: relative;
+        }
+
+        /* HEADER */
+        header.doc-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 5px solid var(--ge-red);
+            padding-bottom: 25px;
+            margin-bottom: 40px;
+        }
+
+        .header-left {
+            display: flex;
+            gap: 30px;
+            align-items: center;
+        }
+
+        .header-left img.logo-symbol {
+            height: 90px;
+            width: auto;
+        }
+
+        .header-left img.logo-text {
+            height: 120px;
+            width: auto;
+        }
+
+        .header-right {
+            text-align: right;
+            border-left: 3px solid #ddd;
+            padding-left: 20px;
+        }
+
+        .header-right h1 {
+            font-size: 24pt;
+            font-weight: 900;
+            color: var(--ge-red);
+            margin: 0;
+            text-transform: uppercase;
+            line-height: 1;
+        }
+
+        .version-badge {
+            background: var(--ge-black);
+            color: white;
+            padding: 5px 10px;
+            font-weight: bold;
+            font-size: 12pt;
+            display: inline-block;
+            margin-top: 10px;
+            border-radius: 4px;
+        }
+
+        /* CONTENT */
+        h2 {
+            font-size: 22pt;
+            color: var(--ge-black);
+            border-left: 10px solid var(--ge-red);
+            padding-left: 15px;
+            margin-top: 50px;
+            margin-bottom: 30px;
+            page-break-before: always;
+        }
+
+        h3 {
+            font-size: 16pt;
+            color: var(--ge-red);
+            border-bottom: 2px solid #eee;
+            padding-bottom: 5px;
+            margin-top: 40px;
+        }
+
+        /* LISTS & TABLES */
+        ol.sop-list {
+            padding-left: 20px;
+            counter-reset: sop-counter;
+            list-style: none;
+        }
+
+        ol.sop-list li {
+            position: relative;
+            margin-bottom: 12px;
+            padding-left: 35px;
+        }
+
+        ol.sop-list li::before {
+            counter-increment: sop-counter;
+            content: counter(sop-counter);
+            position: absolute;
+            left: 0;
+            top: 2px;
+            width: 22px;
+            height: 22px;
+            background-color: var(--ge-black);
+            color: white;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 22px;
+            font-size: 9pt;
+            font-weight: bold;
+        }
+
+        table.data-dict {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 10pt;
+            margin-bottom: 30px;
+        }
+
+        table.data-dict th {
+            background: var(--ge-black);
+            color: white;
+            padding: 12px;
+            text-align: left;
+        }
+
+        table.data-dict td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            vertical-align: top;
+        }
+
+        table.data-dict tr:nth-child(even) {
+            background: #f9f9f9;
+        }
+
+        /* CODE & TROUBLESHOOTING */
+        .code-block {
+            background: var(--code-bg);
+            color: #d4d4d4;
+            padding: 20px;
+            border-radius: 6px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 9pt;
+            overflow-x: auto;
+            margin: 20px 0;
+            border-left: 5px solid var(--ge-red);
+            white-space: pre-wrap;
+        }
+
+        .code-title {
+            background: #333;
+            color: #fff;
+            padding: 5px 20px;
+            font-size: 9pt;
+            border-radius: 6px 6px 0 0;
+            margin-top: 20px;
+            margin-bottom: -20px;
+            position: relative;
+            z-index: 1;
+            width: fit-content;
+        }
+
+        .ts-section {
+            background: #fff5f5;
+            border: 2px solid #ffcccc;
+            padding: 20px;
+            margin-top: 30px;
+        }
+
+        .ts-title {
+            color: #b00;
+            font-weight: bold;
+            border-bottom: 1px solid #ffcccc;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+            display: block;
+        }
+
+        .ts-item {
+            margin-bottom: 15px;
+        }
+
+        .ts-problem {
+            font-weight: 700;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .ts-solution {
+            display: block;
+            margin-left: 15px;
+            border-left: 3px solid #b00;
+            padding-left: 10px;
+            color: #444;
+        }
+
+        @media print {
+            body {
+                background: white;
+                -webkit-print-color-adjust: exact;
+            }
+
+            .paper-page {
+                width: 100%;
+                max-width: 100%;
+                margin: 0;
+                padding: 0;
+                box-shadow: none;
+                min-height: auto;
+                page-break-after: always;
+            }
+
+            .no-print {
+                display: none;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- COVER PAGE -->
+    <div class="paper-page">
+        <div style="text-align: center; margin-top: 300px;">
+            <img src="logo1.png" style="height: 150px; margin-bottom: 20px;">
+            <br>
+            <img src="logo2.png" style="height: 200px;">
+            <h1 style="font-size: 48pt; color: var(--ge-red); margin-top: 50px; line-height: 1.1;">SYSTEM DOCUMENTATION
+            </h1>
+            <h2 style="font-size: 24pt; border: none; color: #333; margin-top: 10px;">OPERATIONAL & TECHNICAL MASTER
+                MANUAL</h2>
+            <div style="margin-top: 100px; font-size: 14pt; font-weight: bold;">Prepared for:<br>GENTING ENERGY GROUP
+            </div>
+            <div style="position: absolute; bottom: 50px; right: 50px; text-align: right; color: #666;">
+                <strong>CONFIDENTIAL DOCUMENT</strong><br>2026<br>Rev: 1.0 (Detailed & Complete)
+            </div>
+        </div>
+    </div>
+
+    <!-- 1. DASHBOARD -->
+    <div class="paper-page">
+        <header class="doc-header">
+            <div class="header-left"><img src="logo1.png" class="logo-symbol"><img src="logo2.png" class="logo-text">
+            </div>
+            <div class="header-right">
+                <h1>Dashboard</h1>
+                <div class="version-badge">VERSION 1.0</div>
+            </div>
+        </header>
+
+        <h2>1. Management Dashboard</h2>
+        <p>The Dashboard is the command center, providing real-time visibility into asset health and movement.</p>
+
+        <h3>1.1 Widget Legend</h3>
+        <table class="data-dict">
+            <tr>
+                <th>Widget Name</th>
+                <th>Logic Source</th>
+                <th>Action Required</th>
+            </tr>
+            <tr>
+                <td><strong>Total Assets</strong></td>
+                <td><code>Tool::count()</code></td>
+                <td>Global inventory counter.</td>
+            </tr>
+            <tr>
+                <td><strong>Active Loans</strong></td>
+                <td><code>Loan::where('status', 'ongoing')</code></td>
+                <td>Monitor tools currently out of warehouse.</td>
+            </tr>
+            <tr>
+                <td><strong>Overdue Loans</strong></td>
+                <td><code>Loan::where('return_date', '<', now())</code></td>
+                <td>Immediate follow-up required with borrower.</td>
+            </tr>
+            <tr>
+                <td><strong>Calibration Alert</strong></td>
+                <td><code>Tool::where('next_cal', '<', +7 days)</code></td>
+                <td>Schedule vendor pickup immediately.</td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- 2. LOCATIONS -->
+    <div class="paper-page">
+        <header class="doc-header">
+            <div class="header-left"><img src="logo1.png" class="logo-symbol"><img src="logo2.png" class="logo-text">
+            </div>
+            <div class="header-right">
+                <h1>Locations</h1>
+                <div class="version-badge">VERSION 1.0</div>
+            </div>
+        </header>
+        <h2>2. Locations & Storage Architecture</h2>
+        <h3>2.1 Locations SOP</h3>
+        <ol class="sop-list">
+            <li>Go to **Master Data > Locations**.</li>
+            <li>Click **Create New**.</li>
+            <li>Fill **Storage Code** (e.g., `WH-A`) and **Name**.</li>
+            <li>Select **Type**. Click **Save**.</li>
+        </ol>
+        <h3>2.2 Racks SOP</h3>
+        <ol class="sop-list">
+            <li>Go to **Master Data > Racks**.</li>
+            <li><strong>Select Parent Location First.</strong></li>
+            <li>Enter **Rack Code** (e.g., `R-A1`).</li>
+            <li>Click **Save**.</li>
+        </ol>
+    </div>
+
+    <!-- 3. CONFIGURATION MASTERS -->
+    <div class="paper-page">
+        <header class="doc-header">
+            <div class="header-left"><img src="logo1.png" class="logo-symbol"><img src="logo2.png" class="logo-text">
+            </div>
+            <div class="header-right">
+                <h1>Configuration</h1>
+                <div class="version-badge">VERSION 1.0</div>
+            </div>
+        </header>
+        <h2>3. Asset Configuration Masters</h2>
+        <p>Before creating tools, you must define these classification attributes.</p>
+
+        <h3>3.1 Tools Types</h3>
+        <ol class="sop-list">
+            <li>Go to **Master Data > Tool Types**.</li>
+            <li>Click **Add New**.</li>
+            <li>Enter Name (e.g., *Power Tools*, *Safety Gear*).</li>
+            <li>**Is Consumable?**: Check only if items are single-use (e.g., Gloves).</li>
+        </ol>
+
+        <h3>3.2 Material Groups</h3>
+        <ol class="sop-list">
+            <li>Go to **Master Data > Material Groups**.</li>
+            <li>Define grouping logic (e.g., *Electrical*, *Mechanical*).</li>
+        </ol>
+
+        <h3>3.3 Manufacturers</h3>
+        <ol class="sop-list">
+            <li>Go to **Master Data > Manufacturers**.</li>
+            <li>Enter Brand Name (e.g., *Bosch*, *Makita*).</li>
+            <li>Enter Support Contact (Optional).</li>
+        </ol>
+
+        <h3>3.4 Calibration Vendors</h3>
+        <ol class="sop-list">
+            <li>Go to **Master Data > Vendors**.</li>
+            <li>Enter **Company Name** and **Service Capability**.</li>
+            <li>Technical Note: Used in Calibration Transactions.</li>
+        </ol>
+    </div>
+
+    <!-- 4. ASSET REGISTRY -->
+    <div class="paper-page">
+        <header class="doc-header">
+            <div class="header-left"><img src="logo1.png" class="logo-symbol"><img src="logo2.png" class="logo-text">
+            </div>
+            <div class="header-right">
+                <h1>Asset Registry</h1>
+                <div class="version-badge">VERSION 1.0</div>
+            </div>
+        </header>
+        <h2>4. Tools Asset Registry</h2>
+        <h3>4.1 Creating New Asset</h3>
+        <ol class="sop-list">
+            <li>Go to **Master Data > Tools**.</li>
+            <li>Click **Create New**.</li>
+            <li><strong>Barcode Scanning</strong>: Click field and scan physical tag.</li>
+            <li>Select **Type**, **Group**, **Brand** from dropdowns (configured in Chap 3).</li>
+            <li>Select **Location** & **Rack**.</li>
+            <li>Note: Initial status is always **Available**.</li>
+        </ol>
+        <div class="code-title">SQL Schema</div>
+        <pre class="code-block">CREATE TABLE tools (serial_number VARCHAR(255) UNIQUE, status ENUM(...));</pre>
+    </div>
+
+    <!-- 5. LOAN TRANSACTIONS -->
+    <div class="paper-page">
+        <header class="doc-header">
+            <div class="header-left"><img src="logo1.png" class="logo-symbol"><img src="logo2.png" class="logo-text">
+            </div>
+            <div class="header-right">
+                <h1>Transactions</h1>
+                <div class="version-badge">VERSION 1.0</div>
+            </div>
+        </header>
+        <h2>5. Loan Management</h2>
+        <h3>5.1 Issue Loan</h3>
+        <ol class="sop-list">
+            <li>Menu: **Loan Transaction > New Loan**.</li>
+            <li>Search Borrower by **NIK**.</li>
+            <li>Scan Tool. System validates `status == 'available'`.</li>
+            <li>Submit. Tool Status -> `in_use`.</li>
+        </ol>
+        <h3>5.2 Return Loan</h3>
+        <ol class="sop-list">
+            <li>Menu: **Loan Transaction > List**.</li>
+            <li>Find active loan. Click **Return**.</li>
+            <li>Tool Status -> `available`.</li>
+        </ol>
+    </div>
+
+    <!-- 6. MUTATION -->
+    <div class="paper-page">
+        <header class="doc-header">
+            <div class="header-left"><img src="logo1.png" class="logo-symbol"><img src="logo2.png" class="logo-text">
+            </div>
+            <div class="header-right">
+                <h1>Mutations</h1>
+                <div class="version-badge">VERSION 1.0</div>
+            </div>
+        </header>
+        <h2>6. Asset Mutation (Transfer)</h2>
+        <p>Use this to permanently move assets between Warehouses or Racks.</p>
+        <h3>6.1 Mutation SOP</h3>
+        <ol class="sop-list">
+            <li>Menu: **Transaction > Mutation**.</li>
+            <li>Select **Tool** (Must be Available).</li>
+            <li>Select **Origin** (Auto-filled) and **Destination Location**.</li>
+            <li>Select **Destination Rack**.</li>
+            <li>Submit. System updates `location_id` on `tools` table.</li>
+        </ol>
+    </div>
+
+    <!-- 7. MAINTENANCE -->
+    <div class="paper-page">
+        <header class="doc-header">
+            <div class="header-left"><img src="logo1.png" class="logo-symbol"><img src="logo2.png" class="logo-text">
+            </div>
+            <div class="header-right">
+                <h1>Maintenance</h1>
+                <div class="version-badge">VERSION 1.0</div>
+            </div>
+        </header>
+        <h2>7. Calibration & Maintenance</h2>
+        <h3>7.1 Send to Calibration</h3>
+        <ol class="sop-list">
+            <li>Menu: **Transaction > Calibration**.</li>
+            <li>Select Tool and **Vendor**.</li>
+            <li>Tool Status -> `calibration`.</li>
+        </ol>
+        <h3>7.2 Receive from Calibration</h3>
+        <ol class="sop-list">
+            <li>Find active calibration ticket. Click **Receive**.</li>
+            <li>Upload **Certificate** (PDF/JPG).</li>
+            <li>Set **Next Due Date** (Critical for alerts).</li>
+            <li>Tool Status -> `available`.</li>
+        </ol>
+    </div>
+
+    <!-- 8. REPORTING -->
+    <div class="paper-page">
+        <header class="doc-header">
+            <div class="header-left"><img src="logo1.png" class="logo-symbol"><img src="logo2.png" class="logo-text">
+            </div>
+            <div class="header-right">
+                <h1>Analytics</h1>
+                <div class="version-badge">VERSION 1.0</div>
+            </div>
+        </header>
+        <h2>8. Reporting Center</h2>
+        <h3>8.1 Generating Reports</h3>
+        <ol class="sop-list">
+            <li>Menu: **Analytics > Reporting Center**.</li>
+            <li>Select Report Type: **Stock**, **Loan History**, or **Damage Log**.</li>
+            <li>Select Date Range.</li>
+            <li>Click **Export to Excel**.</li>
+        </ol>
+    </div>
+
+    <!-- 9. ADMIN -->
+    <div class="paper-page">
+        <header class="doc-header">
+            <div class="header-left"><img src="logo1.png" class="logo-symbol"><img src="logo2.png" class="logo-text">
+            </div>
+            <div class="header-right">
+                <h1>Admin</h1>
+                <div class="version-badge">VERSION 1.0</div>
+            </div>
+        </header>
+        <h2>9. Administrative Guide (Tinker & Console)</h2>
+        <p>Use these commands for system maintenance and disaster recovery.</p>
+
+        <h3>9.1 Essential Console Commands (CMD / Terminal)</h3>
+        <p>Run these commands in the project root directory (e.g., <code>C:\xampp\htdocs\SystemGudang_Lbe</code>).</p>
+
+        <div class="code-title">Server & Setup</div>
+        <pre class="code-block">
+# Start Local Server
+php artisan serve
+
+# Fix Image/Logo Not Loading
+php artisan storage:link
+</pre>
+
+        <div class="code-title">Database Maintenance</div>
+        <pre class="code-block">
+# Run Database Updates (Migrations)
+php artisan migrate
+
+# [WARNING] Reset Database (Deletes All Data!)
+php artisan migrate:fresh --seed
+</pre>
+
+        <div class="code-title">Cache & Performance (Fix weird glitches)</div>
+        <pre class="code-block">
+php artisan optimize:clear
+php artisan config:cache
+php artisan route:cache
+php artisan view:clear
+</pre>
+
+        <div class="code-title">Automation (Scheduler)</div>
+        <pre class="code-block">
+# Run Calibration Alert Checks manually
+php artisan schedule:run
+</pre>
+
+        <h3>9.2 Environment Configuration (.env)</h3>
+        <p>The <code>.env</code> file governs the global settings. Critical variables to configure:</p>
+
+        <div class="code-title">Database Connection</div>
+        <pre class="code-block">
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=system_gudang_lbe
+DB_USERNAME=root
+DB_PASSWORD=
+</pre>
+
+        <div class="code-title">Notification System (Email)</div>
+        <pre class="code-block">
+MAIL_MAILER=smtp
+MAIL_HOST=smtp.gmail.com
+MAIL_PORT=587
+MAIL_USERNAME=your_email@gmail.com
+MAIL_PASSWORD=your_app_password
+MAIL_ENCRYPTION=tls
+MAIL_FROM_ADDRESS="notification@gentingenergy.com"
+</pre>
+
+        <div class="code-title">App URL (For Image Links)</div>
+        <pre class="code-block">
+APP_URL=http://localhost:8000
+# Change this to your actual IP/Domain in Production
+</pre>
+
+        <h3>9.3 Advanced Tinker (Data Recovery)</h3>
+        <div class="code-title">Create Super Admin</div>
+        <pre class="code-block">
+use App\Models\User;
+use Illuminate\Support\Facades\Hash;
+
+User::create([
+    'name' => 'Name',
+    'username' => 'Username Or ID',
+    'password' => Hash::make('Password'),
+]);
+        </pre>
+        <div class="code-title">Force Repair Status</div>
+        <pre class="code-block">UPDATE tools SET status='available' WHERE status='in_use';</pre>
+    </div>
+
+    <!-- 10. TECHNICAL ROUTE MAP -->
+    <div class="paper-page">
+        <header class="doc-header">
+            <div class="header-left"><img src="logo1.png" class="logo-symbol"><img src="logo2.png" class="logo-text">
+            </div>
+            <div class="header-right">
+                <h1>Architecture</h1>
+                <div class="version-badge">VERSION 1.0</div>
+            </div>
+        </header>
+
+        <h2>10. Technical Architecture: Service Route Map</h2>
+        <p>This section maps every URL Endpoint to its Backend Controller ("What connects to where"). Use this for
+            debugging 404 errors or tracing logic flows.</p>
+
+        <h3>10.1 Authentication & Core</h3>
+        <table class="data-dict">
+            <tr>
+                <th>URI Endpoint</th>
+                <th>HTTP Method</th>
+                <th>Controller :: Method</th>
+                <th>Description</th>
+            </tr>
+            <tr>
+                <td>/login</td>
+                <td>GET</td>
+                <td>LoginController::showLoginForm</td>
+                <td>Show Entry Page</td>
+            </tr>
+            <tr>
+                <td>/login</td>
+                <td>POST</td>
+                <td>LoginController::login</td>
+                <td>Process Credentials</td>
+            </tr>
+            <tr>
+                <td>/logout</td>
+                <td>POST</td>
+                <td>LoginController::logout</td>
+                <td>Terminate Session</td>
+            </tr>
+            <tr>
+                <td>/dashboard</td>
+                <td>GET</td>
+                <td>DashboardController::index</td>
+                <td>Main Command Center</td>
+            </tr>
+        </table>
+
+        <h3>10.2 Master Data Routes</h3>
+        <table class="data-dict">
+            <tr>
+                <th>URI / Resource</th>
+                <th>Controller</th>
+                <th>Key Methods</th>
+            </tr>
+            <tr>
+                <td>/locations</td>
+                <td>LocationsController</td>
+                <td>index, store, update, destroy</td>
+            </tr>
+            <tr>
+                <td>/racks</td>
+                <td>RackController</td>
+                <td>store, update (Child of Location)</td>
+            </tr>
+            <tr>
+                <td>/tools</td>
+                <td>ToolsController</td>
+                <td>store (Creates Asset), show (Detail)</td>
+            </tr>
+            <tr>
+                <td>/tools-type</td>
+                <td>ToolsTypeController</td>
+                <td>Category Definitions</td>
+            </tr>
+            <tr>
+                <td>/manufacture</td>
+                <td>ManufacturerController</td>
+                <td>Brand Management</td>
+            </tr>
+            <tr>
+                <td>/employee</td>
+                <td>EmployeeController</td>
+                <td>Borrower Database</td>
+            </tr>
+        </table>
+
+        <h3>10.3 Transactional Logic Flow</h3>
+        <table class="data-dict">
+            <tr>
+                <th>URI Endpoint</th>
+                <th>Controller :: Method</th>
+                <th>Logic Hook</th>
+            </tr>
+            <tr>
+                <td>/loan/items/{id}</td>
+                <td>LoanController::getAvailableItems</td>
+                <td>AJAX: Checks 'Available' status</td>
+            </tr>
+            <tr>
+                <td>/loan (POST)</td>
+                <td>LoanController::store</td>
+                <td><strong>Locks Asset</strong> (Status -> In Use)</td>
+            </tr>
+            <tr>
+                <td>/loan/{id}/return</td>
+                <td>LoanController::processReturn</td>
+                <td><strong>Unlocks Asset</strong> (Status -> Available)</td>
+            </tr>
+            <tr>
+                <td>/damage-lost (POST)</td>
+                <td>DamageLostController::store</td>
+                <td><strong>Flags Asset</strong> (Status -> Loss/Damage)</td>
+            </tr>
+            <tr>
+                <td>/mutation (POST)</td>
+                <td>MutationController::store</td>
+                <td>Updates <code>location_id</code> permanently</td>
+            </tr>
+        </table>
+
+        <h3>10.4 Reporting & Analytics</h3>
+        <table class="data-dict">
+            <tr>
+                <th>URI Endpoint</th>
+                <th>Controller :: Method</th>
+                <th>Output</th>
+            </tr>
+            <tr>
+                <td>/reporting-center</td>
+                <td>ReportingCenterController::index</td>
+                <td>UI Filter Selection</td>
+            </tr>
+            <tr>
+                <td>/reporting-center/export</td>
+                <td>ReportingCenterController::exportExcel</td>
+                <td><strong>.XLSX File Download</strong></td>
+            </tr>
+        </table>
+    </div>
+
+</body>
+
+</html>

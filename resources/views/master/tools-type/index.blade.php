@@ -174,7 +174,7 @@
                                         title="Edit Type">
                                         <i class="bi bi-pencil-square"></i>
                                     </a>
-                                    <button onclick="openDeleteModal('{{ route('tools-type.destroy', $item->id) }}')"
+                                    <button onclick="openDeleteModal('{{ route('tools-type.destroy', $item->id) }}', true)"
                                         class="btn btn-sm btn-outline-danger" title="Delete Type">
                                         <i class="bi bi-trash"></i>
                                     </button>

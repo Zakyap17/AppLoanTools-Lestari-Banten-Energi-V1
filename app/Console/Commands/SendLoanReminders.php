@@ -34,36 +34,44 @@ class SendLoanReminders extends Command
             })
             ->get();
 
-        $this->info("Found {$loans->count()} active loans. Checking for reminders...");
+        $this->info("Found {$loans->count()} items in active loans. Checking for reminders...");
 
-        $bar = $this->output->createProgressBar($loans->count());
+        // Group by loan_code to send one email per document
+        $groupedLoans = $loans->groupBy('loan_code');
+
+        $bar = $this->output->createProgressBar($groupedLoans->count());
         $bar->start();
 
-        foreach ($loans as $loan) {
-            $expectedReturn = \Carbon\Carbon::parse($loan->expected_return_date)->startOfDay();
+        foreach ($groupedLoans as $loanCode => $items) {
+            $firstLoan = $items->first();
+            $expectedReturn = \Carbon\Carbon::parse($firstLoan->expected_return_date)->startOfDay();
             $today = \Carbon\Carbon::now()->startOfDay();
-
-            // Check if we already sent a reminder today
-            if ($loan->last_reminder_sent_at && \Carbon\Carbon::parse($loan->last_reminder_sent_at)->isSameDay($today)) {
-                $this->info("Skipping loan {$loan->loan_code}: Reminder already sent today.");
-                $bar->advance();
-                continue;
-            }
 
             $diff = $today->diffInDays($expectedReturn, false);
             $daysLeft = (int) $diff;
 
             // Send reminder if due in 5 days or less AND not overdue (0 to 5 days)
-            // Overdue items (negative days) are handled by CheckOverdueLoans command
             if ($daysLeft >= 0 && $daysLeft <= 5) {
-                if ($loan->borrower && $loan->borrower->email) {
+                if ($firstLoan->borrower && $firstLoan->borrower->email) {
                     try {
-                        \Illuminate\Support\Facades\Mail::to($loan->borrower->email)->send(new \App\Mail\LoanReminder($loan, $daysLeft));
+                        $mail = \Illuminate\Support\Facades\Mail::to($firstLoan->borrower->email);
 
-                        // Update last_reminder_sent_at
-                        $loan->update(['last_reminder_sent_at' => now()]);
+                        // Add Management BCC
+                        $mgmtEmails = env('MANAGEMENT_EMAILS');
+                        if ($mgmtEmails) {
+                            $emails = array_map('trim', explode(',', $mgmtEmails));
+                            $mail->bcc($emails);
+                        }
+
+                        // Send email with ALL items in this document
+                        $mail->send(new \App\Mail\LoanReminder($items, $daysLeft));
+
+                        // Update last_reminder_sent_at for all items in the group
+                        foreach ($items as $loan) {
+                            $loan->update(['last_reminder_sent_at' => now()]);
+                        }
                     } catch (\Exception $e) {
-                        $this->error("Failed to send to {$loan->borrower->email}: " . $e->getMessage());
+                        $this->error("Failed to send to {$firstLoan->borrower->email} for loan {$loanCode}: " . $e->getMessage());
                     }
                 }
             }

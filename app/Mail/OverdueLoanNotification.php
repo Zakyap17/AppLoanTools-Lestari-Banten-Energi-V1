@@ -25,13 +25,11 @@ class OverdueLoanNotification extends Mailable
         $this->loans = $loans;
     }
 
-    /**
-     * Get the message envelope.
-     */
     public function envelope(): Envelope
     {
+        $firstLoan = $this->loans->first();
         return new Envelope(
-            subject: 'URGENT: Overdue Equipment Return - ' . $this->borrowerName,
+            subject: 'URGENT: Overdue Equipment Return - ' . ($firstLoan->loan_code ?? 'Manual') . ' (' . $this->borrowerName . ')',
         );
     }
 

@@ -67,6 +67,11 @@ class ToolsMatSubGroupController extends Controller
 
     public function destroy($id)
     {
+        $password = request('password_confirmation_val');
+
+        if (!\Illuminate\Support\Facades\Hash::check($password, auth()->user()->password)) {
+            return redirect()->back()->with('error', 'Incorrect password. Deletion cancelled.');
+        }
         $subGroup = ToolsMatSubGroup::findOrFail($id);
 
         // Check if any tools are using this sub group

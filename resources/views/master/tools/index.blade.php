@@ -213,6 +213,7 @@
                         <th>Type</th>
                         <th>Location / Bin</th>
                         <th class="text-center">QTY (Avail/Total)</th>
+                        <th class="text-center">PO Number</th>
                         <th class="text-center">UOM</th>
                         <th>Manufacturer</th>
                         <th>Price</th>
@@ -245,6 +246,7 @@
                                     {{ $tool->available_quantity }}
                                 </span> / <span class="text-muted">{{ $tool->items->count() }}</span>
                             </td>
+                            <td class="text-center small">{{ $tool->po_number ?? '-' }}</td>
                             <td class="text-center small">{{ $tool->uom ?? '-' }}</td>
                             <td class="small">{{ $tool->manufacturer->name ?? '-' }}</td>
                             <td class="text-end small">{{ $tool->price ? number_format($tool->price, 0, ',', '.') : '-' }}</td>
@@ -317,12 +319,25 @@
                                                 <i class="bi bi-pencil-square text-success me-2"></i> Edit Tool
                                             </a>
                                         </li>
+                                        <li>
+                                            <a class="dropdown-item small py-2" href="{{ route('tools.good-receipt', $tool->id) }}" target="_blank">
+                                                <i class="bi bi-file-earmark-text text-primary me-2"></i> View ID GR
+                                            </a>
+                                        </li>
+                                        @if($tool->batch_id)
+                                            <li>
+                                                <a class="dropdown-item small py-2" href="{{ route('tools.print-batch', $tool->batch_id) }}" target="_blank">
+                                                    <i class="bi bi-collection text-info me-2"></i> View Batch GR
+                                                </a>
+                                            </li>
+                                        @endif
                                         <li><hr class="dropdown-divider my-1"></li>
                                         <li>
-                                            <button class="dropdown-item small py-2 text-danger" onclick="openDeleteModal('{{ route('tools.destroy', $tool->id) }}')">
+                                            <button class="dropdown-item small py-2 text-danger" onclick="openDeleteModal('{{ route('tools.destroy', $tool->id) }}', true)">
                                                 <i class="bi bi-trash me-2"></i> Delete Tool
                                             </button>
                                         </li>
+
                                     </ul>
                                 </div>
                             </td>

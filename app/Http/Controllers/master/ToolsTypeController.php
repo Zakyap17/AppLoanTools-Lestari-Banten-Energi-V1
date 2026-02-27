@@ -88,6 +88,12 @@ class ToolsTypeController extends Controller
      */
     public function destroy(string $id)
     {
+        $password = request('password_confirmation_val');
+
+        if (!\Illuminate\Support\Facades\Hash::check($password, auth()->user()->password)) {
+            return redirect()->back()->with('error', 'Incorrect password. Deletion cancelled.');
+        }
+
         try {
             $toolType = ToolType::findOrFail($id);
             $toolType->delete();

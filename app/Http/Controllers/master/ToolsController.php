@@ -46,7 +46,8 @@ class ToolsController extends Controller
         $types = ToolType::all();
         $manufacturers = Manufacturer::all();
         // Updated filter to 'Room' as per new requirement
-        $locations = Location::where('storage_type', 'Room')->get();
+        // Updated filter to include other storage types
+        $locations = Location::whereIn('storage_type', ['Room', 'Loan Tools', 'Department'])->get();
         $matGroups = ToolsMatGroup::all();
         $matSubGroups = ToolsMatSubGroup::all();
 
@@ -87,43 +88,133 @@ class ToolsController extends Controller
     /**
      * Store a newly created resource in storage.
      */
+    /**
+     * Store a newly created resource in storage.
+     */
     public function store(Request $request)
     {
-        // Simple validation for now, can be expanded
-        $validated = $request->validate([
-            'code' => 'required|unique:tools,code',
-            'name' => 'required',
-            'quantity' => 'required|integer|min:0',
-            // Add other validations as needed
+        $request->validate([
+            'tools' => 'required|array|min:1',
+            'tools.*.name' => 'required|string',
+            'tools.*.quantity' => 'required|integer|min:0',
+            'tools.*.type_id' => 'nullable|exists:tools_types,id',
+            'tools.*.manufacturer_id' => 'nullable|exists:manufacturers,id',
+            'tools.*.location_id' => 'nullable|exists:locations,id',
+            'tools.*.rack_id' => 'nullable|exists:racks,id',
         ]);
 
         try {
             \Illuminate\Support\Facades\DB::beginTransaction();
 
-            $tool = Tool::create($request->all());
+            $createdCount = 0;
+            $batchId = (string) \Illuminate\Support\Str::uuid();
 
-            // Generate Serialized Items
-            if ($tool->quantity > 0) {
-                for ($i = 1; $i <= $tool->quantity; $i++) {
-                    $seq = str_pad($i, 3, '0', STR_PAD_LEFT);
-                    \App\Models\ToolItem::create([
-                        'tool_id' => $tool->id,
-                        'serial_number' => $tool->code . '-' . $seq,
-                        'status' => 'available',
-                        'condition' => 'Good',
-                        'purchase_date' => now(),
-                        'created_by' => auth()->id()
-                    ]);
+            foreach ($request->tools as $toolData) {
+                // Generate Unique Code (MT)
+                $toolData['code'] = $this->generateNextCode();
+
+                // Generate Unique Asset No (TAS)
+                $toolData['serial_number'] = $this->generateNextAssetNo();
+
+                // Assign Batch ID
+                $toolData['batch_id'] = $batchId;
+
+                // Create Tool
+                $tool = Tool::create($toolData);
+
+                // Generate Serialized Items
+                if ($tool->quantity > 0) {
+                    for ($i = 1; $i <= $tool->quantity; $i++) {
+                        $seq = str_pad($i, 3, '0', STR_PAD_LEFT);
+                        \App\Models\ToolItem::create([
+                            'tool_id' => $tool->id,
+                            'serial_number' => $tool->code . '-' . $seq,
+                            'status' => 'available',
+                            'condition' => 'Good',
+                            'purchase_date' => now(),
+                            'created_by' => auth()->id()
+                        ]);
+                    }
                 }
+                $createdCount++;
             }
 
             \Illuminate\Support\Facades\DB::commit();
-            return redirect()->route('tools.index')->with('success', 'Tool created with ' . $tool->quantity . ' serialized items.');
+
+            // Redirect Logic
+            if ($createdCount > 1) {
+                return response()->json([
+                    'status' => 'success',
+                    'message' => "$createdCount tools created successfully.",
+                    'redirect' => route('tools.index')
+                ]);
+            }
+
+            return response()->json([
+                'status' => 'success',
+                'message' => "$createdCount tool created successfully.",
+                'redirect' => route('tools.index')
+            ]);
 
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\DB::rollBack();
-            return redirect()->back()->with('error', 'Failed to create tool: ' . $e->getMessage())->withInput();
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to create tools: ' . $e->getMessage()
+            ], 500);
         }
+    }
+
+    public function printBatch($batchId)
+    {
+        $tools = Tool::with(['type', 'manufacturer', 'location', 'rack', 'subGroup.matGroup'])
+            ->where('batch_id', $batchId)
+            ->get();
+
+        if ($tools->isEmpty()) {
+            return redirect()->route('tools.index')->with('error', 'Batch not found.');
+        }
+
+        return view('master.tools.good-receipt-batch', compact('tools'));
+    }
+
+    private function generateNextCode()
+    {
+        $prefix = '26'; // Year Prefix
+        // We need to check the DB *and* potentially any locked/reserved codes if high concurrency, 
+        // but for this app, checking latest DB record is usually sufficient.
+        // However, since we are doing a loop, we might collide if we just query DB.
+        // A better approach is to lock or use a sequence, but for simplicity:
+        // We will query, but since we are in a transaction, we should be careful.
+        // Actually, for bulk import in a loop, we can just increment from the last one found ONCE
+        // at the start, but here we do it per item. 
+        // To avoid collision within the SAME request loop, we can't trust the DB query alone 
+        // because the previous iteration's insert might not be visible or committed yet? 
+        // Actually inside transaction it might be visible. Let's try direct query.
+
+        $lastTool = Tool::where('code', 'like', $prefix . '%')
+            ->orderByRaw('LENGTH(code) desc')
+            ->orderBy('code', 'desc')
+            ->first();
+
+        $lastNum = 0;
+        if ($lastTool) {
+            if (str_starts_with($lastTool->code, $prefix)) {
+                $lastNum = intval(substr($lastTool->code, strlen($prefix)));
+            }
+        }
+        return $prefix . str_pad($lastNum + 1, 5, '0', STR_PAD_LEFT);
+    }
+
+    private function generateNextAssetNo()
+    {
+        $lastAsset = Tool::where('serial_number', 'like', 'TAS%')
+            ->orderByRaw('LENGTH(serial_number) desc')
+            ->orderBy('serial_number', 'desc')
+            ->first();
+
+        $lastAssetNum = $lastAsset ? intval(substr($lastAsset->serial_number, 3)) : 0;
+        return 'TAS' . str_pad($lastAssetNum + 1, 5, '0', STR_PAD_LEFT);
     }
 
     /**
@@ -143,7 +234,8 @@ class ToolsController extends Controller
         $types = ToolType::all();
         $manufacturers = Manufacturer::all();
         // Updated filter to 'Room'
-        $locations = Location::where('storage_type', 'Room')->get();
+        // Updated filter to include other storage types
+        $locations = Location::whereIn('storage_type', ['Room', 'Loan Tools', 'Department'])->get();
         $matGroups = ToolsMatGroup::all();
         $matSubGroups = ToolsMatSubGroup::all();
 
@@ -161,6 +253,7 @@ class ToolsController extends Controller
             'code' => 'required|unique:tools,code,' . $id,
             'name' => 'required',
             'quantity' => 'required|integer|min:0',
+            'po_number' => 'nullable|string',
         ]);
 
         try {
@@ -225,17 +318,24 @@ class ToolsController extends Controller
      */
     public function destroy(string $id)
     {
-        // $password = request('password_confirmation_val');
+        $password = request('password_confirmation_val');
 
-        // if (!\Illuminate\Support\Facades\Hash::check($password, auth()->user()->password)) {
-        //     return redirect()->back()->with('error', 'Incorrect password. Deletion cancelled.');
-        // }
+        if (!\Illuminate\Support\Facades\Hash::check($password, auth()->user()->password)) {
+            return redirect()->back()->with('error', 'Incorrect password. Deletion cancelled.');
+        }
 
         $tool = Tool::findOrFail($id);
         $tool->delete();
 
         return redirect()->back()->with('success', 'Tool deleted successfully.');
     }
+
+    public function goodReceipt($id)
+    {
+        $tool = Tool::with(['type', 'manufacturer', 'location', 'rack', 'subGroup.matGroup'])->findOrFail($id);
+        return view('master.tools.good-receipt', compact('tool'));
+    }
+
 
     public function template()
     {
@@ -462,6 +562,7 @@ class ToolsController extends Controller
             ['code' => $code],
             [
                 'serial_number' => $assetNo,
+                'po_number' => isset($data[11]) ? $data[11] : null, // Add mapping for Column 11
                 'name' => $desc,
                 'type_id' => $typeId,
                 'manufacturer_id' => $manfId,

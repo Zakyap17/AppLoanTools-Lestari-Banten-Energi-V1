@@ -1,0 +1,52 @@
+ M .env.example
+ M app/Console/Commands/CheckOverdueLoans.php
+ M app/Console/Commands/SendLoanReminders.php
+ M app/Console/Commands/TestEmailTemplates.php
+ M app/Http/Controllers/Auth/LoginController.php
+ M app/Http/Controllers/EmployeeController.php
+ M app/Http/Controllers/Report/ReportingCenterController.php
+ M app/Http/Controllers/Transaction/LoanController.php
+ M app/Http/Controllers/master/ManufacturerController.php
+ M app/Http/Controllers/master/ToolsController.php
+ M app/Http/Controllers/master/ToolsMatGroupController.php
+ M app/Http/Controllers/master/ToolsMatSubGroupController.php
+ M app/Http/Controllers/master/ToolsTypeController.php
+ M app/Mail/LoanReminder.php
+ M app/Mail/OverdueLoanNotification.php
+ M app/Models/Loan.php
+ M app/Models/User.php
+ M app/View/Composers/NotificationComposer.php
+ M resources/views/emails/loan_reminder.blade.php
+ M resources/views/master/tools-mat-group/index.blade.php
+ M resources/views/master/tools-mat-sub-group/index.blade.php
+ M resources/views/master/tools-type/index.blade.php
+ M resources/views/master/tools/create.blade.php
+ M resources/views/master/tools/edit.blade.php
+ M resources/views/master/tools/index.blade.php
+ M resources/views/partials/topbar.blade.php
+ M resources/views/reporting/index.blade.php
+ M resources/views/transaction/loan/index.blade.php
+ M resources/views/transaction/loan/print.blade.php
+ M routes/console.php
+ M routes/web.php
+?? DEPLOYMENT.md
+?? app/Console/Commands/SendCalibrationReminders.php
+?? app/Console/Commands/SyncLdapUsers.php
+?? app/Http/Controllers/Auth/PasswordController.php
+?? app/Ldap/
+?? app/Mail/CalibrationReminder.php
+?? app/Services/
+?? database/migrations/2026_02_06_154852_add_po_number_to_tools_table.php
+?? database/migrations/2026_02_09_111035_add_ldap_columns_to_users_table.php
+?? database/migrations/2026_02_20_133423_add_batch_id_to_tools_table.php
+?? database/migrations/2026_02_20_155659_add_batch_id_to_tools_table.php.bak
+?? database/migrations/2026_02_25_091353_add_last_calibration_reminder_sent_at_to_tools_table.php
+?? database/migrations/2026_02_26_142216_change_actual_return_date_to_datetime_in_loans_table.php
+?? documentation/
+?? git_status.txt
+?? migrate_output.txt
+?? resources/views/auth/change-password.blade.php
+?? resources/views/emails/calibration_reminder.blade.php
+?? resources/views/master/tools/good-receipt-batch.blade.php
+?? resources/views/master/tools/good-receipt.blade.php
+?? status.txt

@@ -13,15 +13,15 @@ class LoanReminder extends Mailable
 {
     use Queueable, SerializesModels;
 
-    public $loan;
+    public $loans;
     public $daysLeft;
 
     /**
      * Create a new message instance.
      */
-    public function __construct($loan, $daysLeft)
+    public function __construct($loans, $daysLeft)
     {
-        $this->loan = $loan;
+        $this->loans = $loans;
         $this->daysLeft = $daysLeft;
     }
 
@@ -30,13 +30,14 @@ class LoanReminder extends Mailable
      */
     public function envelope(): Envelope
     {
+        $firstLoan = $this->loans->first();
         $status = $this->daysLeft < 0 ? 'TERLAMBAT' : 'Reminder Pengembalian';
         $timeStr = $this->daysLeft < 0
             ? abs($this->daysLeft) . ' Hari'
             : ($this->daysLeft == 0 ? 'HARI INI' : $this->daysLeft . ' Hari Lagi');
 
         return new Envelope(
-            subject: "[$status] $timeStr - Peminjaman #" . $this->loan->loan_code,
+            subject: "[$status] $timeStr - Peminjaman #" . $firstLoan->loan_code,
         );
     }
 
@@ -48,7 +49,7 @@ class LoanReminder extends Mailable
         return new Content(
             view: 'emails.loan_reminder',
             with: [
-                'loan' => $this->loan,
+                'loans' => $this->loans,
                 'daysLeft' => $this->daysLeft,
             ],
         );

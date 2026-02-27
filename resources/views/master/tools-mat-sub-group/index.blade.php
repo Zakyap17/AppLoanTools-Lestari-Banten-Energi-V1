@@ -159,7 +159,8 @@
                                         class="btn btn-sm btn-outline-primary" title="Edit">
                                         <i class="bi bi-pencil-square"></i>
                                     </a>
-                                    <button onclick="openDeleteModal('{{ route('tools-mat-sub-group.destroy', $sub->id) }}')"
+                                    <button
+                                        onclick="openDeleteModal('{{ route('tools-mat-sub-group.destroy', $sub->id) }}', true)"
                                         class="btn btn-sm btn-outline-danger" title="Delete">
                                         <i class="bi bi-trash"></i>
                                     </button>

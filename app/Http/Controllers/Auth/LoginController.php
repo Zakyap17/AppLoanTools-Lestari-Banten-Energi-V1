@@ -13,21 +13,51 @@ class LoginController extends Controller
         return view('auth.login');
     }
 
-    public function login(Request $request)
+    public function login(Request $request, \App\Services\LdapService $ldapService)
     {
         $credentials = $request->validate([
             'username' => ['required', 'string'],
             'password' => ['required'],
         ]);
 
+        // 1. Attempt LDAP Authentication (If Enabled)
+        if (env('LDAP_ENABLED', false)) {
+            if ($ldapService->authenticate($credentials['username'], $credentials['password'])) {
+
+                // 2. Fetch User data from LDAP to sync profile
+                $ldapUser = $ldapService->getUserByUsername($credentials['username']);
+
+                if ($ldapUser) {
+                    // 3. Find or Create/Update Local User
+                    $user = \App\Models\User::updateOrCreate(
+                        ['username' => $ldapUser['username']],
+                        [
+                            'name' => $ldapUser['name'],
+                            'guid' => $ldapUser['guid'],
+                            'is_active' => true,
+                        ]
+                    );
+
+                    // 4. Log the user in
+                    Auth::login($user);
+                    $request->session()->regenerate();
+                    return redirect()->intended('dashboard');
+                }
+            }
+        }
+
+        // 5. Fallback to Local Auth (Directly to this if LDAP is disabled)
         if (Auth::attempt($credentials)) {
             $request->session()->regenerate();
-
             return redirect()->intended('dashboard');
         }
 
+        $errorMsg = env('LDAP_ENABLED', false)
+            ? 'Credential LDAP tidak valid atau akun tidak terdaftar di Warehouse.'
+            : 'Username atau password salah.';
+
         return back()->withErrors([
-            'username' => 'The provided credentials do not match our records.',
+            'username' => $errorMsg,
         ])->onlyInput('username');
     }
 

@@ -30,8 +30,10 @@ use App\Http\Controllers\EmployeeController;
 
 /* Login & Logout */
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\Auth\PasswordController;
 
 Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login');
+
 Route::post('/login', [LoginController::class, 'login']);
 Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
 Route::get('/logout', [LoginController::class, 'logout']); // Fallback for GET requests
@@ -41,8 +43,12 @@ Route::post('/keep-alive', [LoginController::class, 'keepAlive'])->middleware('a
 
 /* Authenticated Routes */
 Route::middleware(['auth'])->group(function () {
+    /* Change Password */
+    Route::get('/change-password', [PasswordController::class, 'showChangePasswordForm'])->name('password.change');
+    Route::post('/change-password', [PasswordController::class, 'update'])->name('password.update');
 
     /* Home */
+
     Route::redirect('/', '/dashboard');
 
     /*Dashboard*/
@@ -68,10 +74,13 @@ Route::middleware(['auth'])->group(function () {
     // Racks Routes
     Route::resource('racks', RackController::class)->only(['edit', 'update', 'destroy']);
 
-    Route::get('/tools/get-bins/{id}', [ToolsController::class, 'getBins']);
+    Route::get('/tools/get-bins/{id}', [ToolsController::class, 'getBins'])->name('tools.get-bins');
     Route::get('/tools/template', [ToolsController::class, 'template'])->name('tools.template');
     Route::post('/tools/import', [ToolsController::class, 'import'])->name('tools.import');
+    Route::get('/tools/{tool}/good-receipt', [ToolsController::class, 'goodReceipt'])->name('tools.good-receipt');
+    Route::get('/tools/print-batch/{batchId}', [ToolsController::class, 'printBatch'])->name('tools.print-batch');
     Route::resource('/tools', ToolsController::class)
+
         ->names([
             'index' => 'tools.index',
             'create' => 'tools.create',
@@ -204,4 +213,6 @@ Route::middleware(['auth'])->group(function () {
         ]);
 
 });
+
+
 

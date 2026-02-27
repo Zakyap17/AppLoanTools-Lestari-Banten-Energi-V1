@@ -44,32 +44,31 @@ class CheckOverdueLoans extends Command
 
         $this->info('Found ' . $overdueLoans->count() . ' overdue items.');
 
-        // 2. Group by Borrower to send 1 email per person
-        $loansByBorrower = $overdueLoans->groupBy('employee_id');
+        // 2. Group by Loan Code to send 1 email per document
+        $loansByDocument = $overdueLoans->groupBy('loan_code');
 
-        foreach ($loansByBorrower as $employeeId => $loans) {
-            $borrower = $loans->first()->borrower;
+        foreach ($loansByDocument as $loanCode => $loans) {
+            $firstLoan = $loans->first();
+            $borrower = $firstLoan->borrower;
 
             if (!$borrower || !$borrower->email) {
-                $this->warn("Skipping Borrower ID {$employeeId}: No Email Address found.");
+                $this->warn("Skipping Loan {$loanCode}: No Borrower Email Address found.");
                 continue;
             }
 
-            // Check if ALL loans in this group have already been sent a reminder TODAY
-            $allSentToday = $loans->every(function ($loan) {
-                return $loan->last_reminder_sent_at && \Carbon\Carbon::parse($loan->last_reminder_sent_at)->isToday();
-            });
-
-            if ($allSentToday) {
-                $this->info("Skipping {$borrower->name}: Already sent reminder for these items today.");
-                continue;
-            }
-
-            $this->info("Sending email to {$borrower->name} ({$borrower->email}) - " . $loans->count() . " items.");
+            $this->info("Sending email to {$borrower->name} ({$borrower->email}) for Loan #{$loanCode} - " . $loans->count() . " items.");
 
             try {
-                \Illuminate\Support\Facades\Mail::to($borrower->email)
-                    ->send(new \App\Mail\OverdueLoanNotification($borrower->name, $loans));
+                $mail = \Illuminate\Support\Facades\Mail::to($borrower->email);
+
+                // Add Management BCC
+                $mgmtEmails = env('MANAGEMENT_EMAILS');
+                if ($mgmtEmails) {
+                    $emails = array_map('trim', explode(',', $mgmtEmails));
+                    $mail->bcc($emails);
+                }
+
+                $mail->send(new \App\Mail\OverdueLoanNotification($borrower->name, $loans));
                 $this->info("Email sent successfully.");
 
                 // Update last_reminder_sent_at for ALL loans in this group
@@ -78,7 +77,7 @@ class CheckOverdueLoans extends Command
                 }
 
             } catch (\Exception $e) {
-                $this->error("Failed to send email to {$borrower->email}: " . $e->getMessage());
+                $this->error("Failed to send email for Loan {$loanCode} to {$borrower->email}: " . $e->getMessage());
             }
         }
 

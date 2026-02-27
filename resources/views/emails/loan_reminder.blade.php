@@ -36,6 +36,7 @@
                     @php
                         $isLate = $daysLeft < 0;
                         $isToday = $daysLeft == 0;
+                        $firstLoan = $loans->first();
 
                         \Illuminate\Support\Facades\Log::info("DEBUG: LoanReminder daysLeft = " . $daysLeft);
 
@@ -75,7 +76,7 @@
                     <tr>
                         <td style="padding: 40px;">
                             <h1 style="color: #1e293b; font-size: 20px; font-weight: 700; margin: 0 0 20px 0;">
-                                Hello, {{ $loan->borrower->name }}
+                                Hello, {{ $firstLoan->borrower->name }}
                             </h1>
                             <p style="color: #64748b; font-size: 16px; line-height: 1.6; margin: 0 0 25px 0;">
                                 @if($isLate)
@@ -99,7 +100,7 @@
                                             style="color: #94a3b8; font-size: 11px; text-transform: uppercase; font-weight: 700;">
                                             Loan Code</div>
                                         <div style="color: #334155; font-size: 14px; font-weight: 600;">
-                                            {{ $loan->loan_code }}
+                                            {{ $firstLoan->loan_code }}
                                         </div>
                                     </td>
                                     <td width="50%" style="padding-bottom: 10px;">
@@ -107,7 +108,7 @@
                                             style="color: #94a3b8; font-size: 11px; text-transform: uppercase; font-weight: 700;">
                                             Loan Date</div>
                                         <div style="color: #334155; font-size: 14px; font-weight: 600;">
-                                            {{ $loan->loan_date }}
+                                            {{ $firstLoan->loan_date ? $firstLoan->loan_date->format('d M, Y') : '-' }}
                                         </div>
                                     </td>
                                 </tr>
@@ -117,7 +118,7 @@
                                             style="color: #94a3b8; font-size: 11px; text-transform: uppercase; font-weight: 700;">
                                             Due Date</div>
                                         <div style="color: #334155; font-size: 14px; font-weight: 600;">
-                                            {{ $loan->expected_return_date }}
+                                            {{ $firstLoan->expected_return_date ? $firstLoan->expected_return_date->format('d M, Y') : '-' }}
                                         </div>
                                     </td>
                                     <td width="50%">
@@ -126,7 +127,7 @@
                                 </tr>
                             </table>
 
-                            <!-- SINGLE ITEM DETAILS (Reminder is usually per row/loan) -->
+                            <!-- ITEM DETAILS -->
                             <table width="100%" border="0" cellpadding="0" cellspacing="0"
                                 style="width: 100%; border-collapse: separate; border-spacing: 0; margin-bottom: 30px;">
                                 <thead>
@@ -143,20 +144,22 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <tr>
-                                        <td
-                                            style="padding: 15px; border-bottom: 1px solid #f1f5f9; color: #334155; font-size: 14px; font-weight: 600;">
-                                            {{ $loan->tool->name }}
-                                        </td>
-                                        <td
-                                            style="padding: 15px; border-bottom: 1px solid #f1f5f9; color: #64748b; font-size: 14px;">
-                                            {{ $loan->tool->code }}
-                                        </td>
-                                        <td align="center"
-                                            style="padding: 15px; border-bottom: 1px solid #f1f5f9; color: #334155; font-size: 14px; font-weight: 700;">
-                                            {{ $loan->loan_quantity }}
-                                        </td>
-                                    </tr>
+                                    @foreach($loans as $loan)
+                                        <tr>
+                                            <td
+                                                style="padding: 15px; border-bottom: 1px solid #f1f5f9; color: #334155; font-size: 14px; font-weight: 600;">
+                                                {{ $loan->tool->name }}
+                                            </td>
+                                            <td
+                                                style="padding: 15px; border-bottom: 1px solid #f1f5f9; color: #64748b; font-size: 14px;">
+                                                {{ $loan->tool->code }}
+                                            </td>
+                                            <td align="center"
+                                                style="padding: 15px; border-bottom: 1px solid #f1f5f9; color: #334155; font-size: 14px; font-weight: 700;">
+                                                {{ $loan->loan_quantity }}
+                                            </td>
+                                        </tr>
+                                    @endforeach
                                 </tbody>
                             </table>
 
