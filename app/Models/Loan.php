@@ -14,7 +14,7 @@ class Loan extends Model
     protected $casts = [
         'loan_date' => 'date',
         'expected_return_date' => 'date',
-        'actual_return_date' => 'date',
+        'actual_return_date' => 'datetime',
     ];
 
     protected static function booted()

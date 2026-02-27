@@ -155,7 +155,16 @@ class LoanController extends Controller
             // Send Email (Queued)
             if ($borrower && $borrower->email) {
                 try {
-                    Mail::to($borrower->email)->queue(new LoanCreated([
+                    $mail = Mail::to($borrower->email);
+
+                    // Add Management BCC
+                    $mgmtEmails = env('MANAGEMENT_EMAILS');
+                    if ($mgmtEmails) {
+                        $emails = array_map('trim', explode(',', $mgmtEmails));
+                        $mail->bcc($emails);
+                    }
+
+                    $mail->queue(new LoanCreated([
                         'loan_code' => $request->loan_code,
                         'employee_name' => $borrower->name,
                         'loan_date' => $request->loan_date,
@@ -179,20 +188,31 @@ class LoanController extends Controller
     public function searchAsset(Request $request)
     {
         $search = $request->get('q');
+        \Illuminate\Support\Facades\Log::info('Asset search query: ' . $search);
 
-        // Require at least 3 characters (matching frontend)
         if (strlen($search) < 3) {
             return response()->json(['results' => []]);
         }
 
         $term = '%' . $search . '%';
 
-        // Simple query with limit - ILIKE for PostgreSQL case-insensitive search
-        $tools = \App\Models\Tool::select('id', 'code', 'name', 'quantity')
-            ->where('code', 'ILIKE', $term)
-            ->orWhere('name', 'ILIKE', $term)
-            ->limit(30)
+        // Using lowercase 'ilike' for consistency with other working controllers
+        $tools = \App\Models\Tool::with([
+            'items' => function ($q) {
+                $q->where('status', 'available');
+            }
+        ])
+            ->where(function ($q) use ($term) {
+                $q->where('code', 'ilike', $term)
+                    ->orWhere('name', 'ilike', $term)
+                    ->orWhereHas('items', function ($sub) use ($term) {
+                        $sub->where('serial_number', 'ilike', $term);
+                    });
+            })
+            ->take(30)
             ->get();
+
+        \Illuminate\Support\Facades\Log::info('Asset search results count: ' . $tools->count());
 
         $results = $tools->map(function ($tool) {
             return [
@@ -200,7 +220,8 @@ class LoanController extends Controller
                 'text' => $tool->code . ' - ' . $tool->name . ' (Stock: ' . ($tool->quantity ?? 0) . ')',
                 'code' => $tool->code ?? '',
                 'name' => $tool->name ?? '',
-                'qty' => $tool->quantity ?? 0
+                'qty' => $tool->quantity ?? 0,
+                'items' => $tool->items
             ];
         });
 
@@ -208,6 +229,7 @@ class LoanController extends Controller
             'results' => $results
         ]);
     }
+
 
     public function getAvailableItems($toolId)
     {
@@ -232,7 +254,7 @@ class LoanController extends Controller
     {
         $request->validate([
             'return_type' => 'required|in:good,damage,lost',
-            'return_quantity' => 'required|integer|min:1',
+            'return_quantity' => 'nullable|integer|min:1',
         ]);
 
         try {
@@ -245,105 +267,90 @@ class LoanController extends Controller
                 return redirect()->back()->with('error', 'Selected item is already processed.');
             }
 
-            $requestedQty = $request->return_quantity;
+            // If quantity not provided from request, use the current loan's quantity
+            $requestedQty = $request->return_quantity ?? $primaryLoan->loan_quantity;
 
-            // Find candidates for bulk return (Same Loan Code, Same Tool, Ongoing)
-            // We prioritize the selected ID, then others
-            $candidates = \App\Models\Loan::where('loan_code', $primaryLoan->loan_code)
-                ->where('tool_id', $primaryLoan->tool_id)
-                ->where('status', 'ongoing')
-                ->orderByRaw("id = $id DESC") // Ensure the clicked one is first
-                ->limit($requestedQty)
-                ->get();
+            // Since we are now focusing on a specific Loan ID (row), 
+            // the logic is simplified to just process this specific row.
+            $loan = $primaryLoan;
+            $takeFromRow = min($loan->loan_quantity, $requestedQty);
 
-            if ($candidates->count() < $requestedQty) {
-                return redirect()->back()->with('error', "Cannot return $requestedQty items. Only " . $candidates->count() . " available for this tool.");
+            // Determine item to update
+            $tool = \App\Models\Tool::findOrFail($loan->tool_id);
+
+            // Decrement loan quantity
+            $loan->decrement('loan_quantity', $takeFromRow);
+            $loan->refresh();
+
+            // If row is fully returned, update status
+            if ($loan->loan_quantity <= 0) {
+                $newStatus = 'returned';
+                if ($request->return_type === 'damage') {
+                    $newStatus = 'returned_damage';
+                } elseif ($request->return_type === 'lost') {
+                    $newStatus = 'returned_lost';
+                }
+
+                $loan->update([
+                    'status' => $newStatus,
+                    'actual_return_date' => now(),
+                    'loan_quantity' => 0
+                ]);
             }
 
-            $remainingQtyToReturn = $requestedQty;
+            if ($request->return_type === 'good') {
+                // Restore stock
+                $tool->increment('quantity', $takeFromRow);
 
-            foreach ($candidates as $loan) {
-                if ($remainingQtyToReturn <= 0)
-                    break;
+                if ($tool->status !== 'available') {
+                    $tool->update(['status' => 'available']);
+                }
 
-                // Determine how much to take from this specific row
-                $availableInRow = $loan->loan_quantity;
-                $takeFromRow = min($availableInRow, $remainingQtyToReturn);
-
-                // Determine item to update
-                $tool = \App\Models\Tool::findOrFail($loan->tool_id);
-
-                // Decrement loan quantity
-                $loan->decrement('loan_quantity', $takeFromRow);
-                $loan->refresh();
-
-                // Update remaining needed
-                $remainingQtyToReturn -= $takeFromRow;
-
-                // If row is fully returned, update status
-                if ($loan->loan_quantity <= 0) {
-                    $newStatus = 'returned';
-                    if ($request->return_type === 'damage') {
-                        $newStatus = 'returned_damage';
-                    } elseif ($request->return_type === 'lost') {
-                        $newStatus = 'returned_lost';
-                    }
-
-                    $loan->update([
-                        'status' => $newStatus,
-                        'actual_return_date' => now(),
-                        'loan_quantity' => 0
+                if ($loan->tool_item_id && $takeFromRow > 0) {
+                    \App\Models\ToolItem::where('id', $loan->tool_item_id)->update([
+                        'status' => 'available',
+                        'condition' => 'Good'
                     ]);
                 }
 
-                if ($request->return_type === 'good') {
-                    // Restore stock
-                    $tool->increment('quantity', $takeFromRow);
+            } else {
+                // Damage or Lost
+                $type = $request->return_type;
+                $count = \App\Models\DamageLost::whereDate('created_at', today())->count() + 1;
+                $reportCode = strtoupper($type) . '-' . date('Ymd') . '-' . str_pad($count, 4, '0', STR_PAD_LEFT);
 
-                    if ($tool->status !== 'available') {
-                        $tool->update(['status' => 'available']);
-                    }
+                \App\Models\DamageLost::create([
+                    'report_code' => $reportCode,
+                    'reference_document' => $loan->loan_code,
+                    'tool_id' => $tool->id,
+                    'tool_item_id' => $loan->tool_item_id,
+                    'employee_id' => $loan->employee_id,
+                    'report_date' => now(),
+                    'type' => $type,
+                    'quantity' => $takeFromRow,
+                    'severity' => $type === 'damage' ? 'medium' : 'high',
+                    'description' => $request->reason ?? 'Reported from Loan Return: ' . $loan->loan_code,
+                    'status' => 'open',
+                ]);
 
-                    if ($loan->tool_item_id && $takeFromRow > 0) {
-                        \App\Models\ToolItem::where('id', $loan->tool_item_id)->update([
-                            'status' => 'available',
-                            'condition' => 'Good'
-                        ]);
-                    }
-
-                } else {
-                    // Damage or Lost
-                    $type = $request->return_type;
-                    $count = \App\Models\DamageLost::whereDate('created_at', today())->count() + 1;
-                    $reportCode = strtoupper($type) . '-' . date('Ymd') . '-' . str_pad($count, 4, '0', STR_PAD_LEFT);
-
-                    \App\Models\DamageLost::create([
-                        'report_code' => $reportCode,
-                        'reference_document' => $loan->loan_code,
-                        'tool_id' => $tool->id,
-                        'tool_item_id' => $loan->tool_item_id,
-                        'employee_id' => $loan->employee_id,
-                        'report_date' => now(),
-                        'type' => $type,
-                        'quantity' => $takeFromRow,
-                        'severity' => $type === 'damage' ? 'medium' : 'high',
-                        'description' => $request->reason ?? 'Reported from Loan Return: ' . $loan->loan_code,
-                        'status' => 'open',
+                if ($loan->tool_item_id && $takeFromRow > 0) {
+                    \App\Models\ToolItem::where('id', $loan->tool_item_id)->update([
+                        'status' => $type,
+                        'condition' => ucfirst($type)
                     ]);
-
-                    if ($loan->tool_item_id && $takeFromRow > 0) {
-                        \App\Models\ToolItem::where('id', $loan->tool_item_id)->update([
-                            'status' => $type,
-                            'condition' => ucfirst($type)
-                        ]);
-                    }
                 }
             }
 
             \Illuminate\Support\Facades\DB::commit();
 
-            $msg = $requestedQty . ' item(s) processed as ' . ucfirst($request->return_type);
-            return redirect()->route('loan.index')->with('success', $msg);
+            $msg = $takeFromRow . ' item(s) processed as ' . ucfirst($request->return_type);
+
+            // Preserve search/page state and keep the current loan row expanded
+            return redirect()->route('loan.index', [
+                'search' => $request->search,
+                'page' => $request->page,
+                'expanded' => $loan->loan_code
+            ])->with('success', $msg);
 
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\DB::rollBack();

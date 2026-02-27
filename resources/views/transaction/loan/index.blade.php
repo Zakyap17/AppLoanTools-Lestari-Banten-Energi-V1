@@ -144,12 +144,13 @@
             <table class="table table-custom align-middle w-100 mb-0">
                 <thead class="text-center">
                     <tr>
-                        <th style="width:40px">#</th>
-                        <th>Document No.</th>
-                        <th>Document Date</th>
-                        <th>Employee Name</th>
-                        <th>Status</th>
-                        <th style="width:140px">Actions</th>
+                        <th style="width:40px" class="text-center">#</th>
+                        <th class="text-center">Document No.</th>
+                        <th class="text-center">Document Date</th>
+                        <th class="text-center">Employee Name</th>
+                        <th class="text-center">Status</th>
+                        <th class="text-center">Returned At</th>
+                        <th style="width:140px" class="text-center">Actions</th>
                     </tr>
                 </thead>
 
@@ -199,19 +200,29 @@
 
                         <tr>
                             <td class="text-center">
-                                <button class="btn btn-sm btn-light border rounded-circle toggle-detail"
+                                <button class="btn btn-sm btn-light border rounded-circle toggle-detail {{ request('expanded') == $firstLoan->loan_code ? 'active' : '' }}"
                                     data-target="loan-detail-{{ $firstLoan->id }}" title="Show Items"
                                     style="width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center;">
-                                    <i class="bi bi-chevron-down"></i>
+                                    <i class="bi {{ request('expanded') == $firstLoan->loan_code ? 'bi-chevron-up' : 'bi-chevron-down' }}"></i>
                                 </button>
                             </td>
-                            <td class="fw-bold text-primary">{{ $firstLoan->loan_code }}</td>
+                            <td class="fw-bold text-primary text-center">{{ $firstLoan->loan_code }}</td>
                             <td class="text-center">{{ $firstLoan->loan_date->format('d M Y') }}</td>
-                            <td>{{ $firstLoan->borrower->name ?? '-' }}</td>
+                            <td class="text-center">{{ $firstLoan->borrower->name ?? '-' }}</td>
                             <td class="text-center">
                                 <span class="badge rounded-pill px-3 {{ $badgeClass }}">
                                     {{ ucfirst($groupStatus) }}
                                 </span>
+                            </td>
+                            <td class="text-center text-muted small">
+                                @if(in_array($groupStatus, ['Returned', 'Returned In Service', 'Returned (Lost Items)']))
+                                    @php
+                                        $latestReturn = $loanGroup->max('actual_return_date');
+                                    @endphp
+                                    {{ $latestReturn ? \Carbon\Carbon::parse($latestReturn)->format('l, d M Y H:i') : '-' }}
+                                @else
+                                    -
+                                @endif
                             </td>
                             <td class="text-center">
                                 <a href="{{ route('loan.print', $firstLoan->loan_code) }}" target="_blank"
@@ -224,8 +235,8 @@
                         </tr>
 
                         {{-- EXPAND DETAIL ROW --}}
-                        <tr id="loan-detail-{{ $firstLoan->id }}" class="d-none bg-light">
-                            <td colspan="6" class="p-4 bg-light border-bottom">
+                        <tr id="loan-detail-{{ $firstLoan->id }}" class="{{ request('expanded') == $firstLoan->loan_code ? '' : 'd-none' }} bg-light">
+                            <td colspan="7" class="p-4 bg-light border-bottom">
                                 <div class="bg-white rounded-3 shadow-sm border p-3">
                                     <h6 class="fw-bold small text-uppercase text-muted mb-3"><i
                                             class="bi bi-list-check me-2"></i> Borrowed Items</h6>
@@ -237,7 +248,8 @@
                                                 <th>Item Name</th>
                                                 <th>Storage / Bin</th>
                                                 <th style="width:80px" class="text-center">QTY</th>
-                                                <th>Status</th>
+                                                <th class="text-center">Returned At</th>
+                                                <th class="text-center">Status</th>
                                                 <th style="width:140px" class="text-center">Action</th>
                                             </tr>
                                         </thead>
@@ -259,6 +271,13 @@
                                                         {{ $item->tool->rack->code ?? '-' }}
                                                     </td>
                                                     <td class="text-center fw-bold">{{ $item->loan_quantity }}</td>
+                                                    <td class="text-center text-muted small">
+                                                        @if(in_array($item->status, ['returned', 'returned_damage', 'returned_lost', 'closed_with_issue']))
+                                                            {{ $item->actual_return_date ? \Carbon\Carbon::parse($item->actual_return_date)->format('d M Y H:i') : '-' }}
+                                                        @else
+                                                            -
+                                                        @endif
+                                                    </td>
                                                     <td class="text-center">
                                                         @php
                                                             $statusClass = 'bg-secondary-subtle text-secondary';
@@ -292,7 +311,7 @@
                                                                 <ul class="dropdown-menu dropdown-menu-end border-0 shadow-lg">
                                                                     <li>
                                                                         <button class="dropdown-item text-success small py-2"
-                                                                            onclick="processReturn({{ $item->id }}, 'good', {{ $maxReturnable }})">
+                                                                            onclick="processReturn({{ $item->id }}, 'good', {{ $item->loan_quantity }})">
                                                                             <i class="bi bi-check-circle me-2"></i> Return Good
                                                                         </button>
                                                                     </li>
@@ -301,14 +320,14 @@
                                                                     </li>
                                                                     <li>
                                                                         <button class="dropdown-item text-warning small py-2"
-                                                                            onclick="processReturn({{ $item->id }}, 'damage', {{ $maxReturnable }})">
+                                                                            onclick="processReturn({{ $item->id }}, 'damage', {{ $item->loan_quantity }})">
                                                                             <i class="bi bi-exclamation-triangle me-2"></i> Report
                                                                             Damage
                                                                         </button>
                                                                     </li>
                                                                     <li>
                                                                         <button class="dropdown-item text-danger small py-2"
-                                                                            onclick="processReturn({{ $item->id }}, 'lost', {{ $maxReturnable }})">
+                                                                            onclick="processReturn({{ $item->id }}, 'lost', {{ $item->loan_quantity }})">
                                                                             <i class="bi bi-x-circle me-2"></i> Report Lost
                                                                         </button>
                                                                     </li>
@@ -328,7 +347,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="text-center text-muted py-5">
+                            <td colspan="7" class="text-center text-muted py-5">
                                 <i class="bi bi-inbox display-1 text-light d-block mb-3"></i>
                                 No loan transactions found.
                             </td>
@@ -354,6 +373,9 @@
         <input type="hidden" name="return_type" id="returnType">
         <input type="hidden" name="reason" id="returnReason">
         <input type="hidden" name="return_quantity" id="returnQty">
+        {{-- Preserve State --}}
+        <input type="hidden" name="search" value="{{ request('search') }}">
+        <input type="hidden" name="page" value="{{ request('page') }}">
     </form>
 
     {{-- MODAL CONFIRMATION --}}
@@ -372,11 +394,9 @@
                     <p class="text-muted small mb-0" id="returnMessageBody">
                         Are you sure you want to mark this item as returned?
                     </p>
-                    <div id="quantityContainer" class="mt-3 text-start">
-                        <label class="form-label small fw-bold">Return Quantity</label>
-                        <input type="number" id="modalQty" class="form-control form-control-sm" min="1" required>
-                        <div id="qtyHelp" class="form-text extra-small mt-1 text-primary"></div>
-                    </div>
+                    <div id="quantityContainer" class="mt-3 text-start d-none">
+                                                                <input type="hidden" id="modalQty">
+                                                            </div>
                     <div id="reasonContainer" class="mt-3 text-start d-none">
                         <label class="form-label small fw-bold">Reason / Notes</label>
                         <textarea id="modalReason" class="form-control form-control-sm" rows="3"
@@ -408,7 +428,7 @@
             });
         });
 
-        function processReturn(loanId, type, maxQty) {
+        function processReturn(loanId, type, rowQty) {
             const typeLabel = type.charAt(0).toUpperCase() + type.slice(1);
             const modalTitle = document.getElementById('returnModalTitle');
             const leadText = document.getElementById('returnLeadText');
@@ -418,9 +438,7 @@
 
             // Set Qty
             const modalQty = document.getElementById('modalQty');
-            modalQty.value = ''; // Don't auto-fill
-            modalQty.max = maxQty;
-            document.getElementById('qtyHelp').innerText = `Borrowed total: ${maxQty}`;
+            modalQty.value = rowQty; // Auto-set to row quantity
 
             // Reset classes
             icon.className = 'bi mb-3';
@@ -428,20 +446,20 @@
 
             if (type === 'good') {
                 modalTitle.innerText = 'Return as Good';
-                leadText.innerText = 'Confirm Partial/Full Return?';
-                bodyText.innerText = 'Specified quantity will be returned to the warehouse inventory.';
+                leadText.innerText = 'Confirm Return?';
+                bodyText.innerText = `Full quantity (${rowQty} item(s)) will be returned to the warehouse inventory.`;
                 icon.classList.add('bi-check-circle', 'text-success');
                 btnConfirm.classList.add('btn-success');
             } else if (type === 'damage') {
                 modalTitle.innerText = 'Return as Damaged';
-                leadText.innerText = 'Report Partial/Full Damage?';
-                bodyText.innerText = 'Specified quantity will be marked as finished but NOT restored to stock. A damage report will be created.';
+                leadText.innerText = 'Report Damage?';
+                bodyText.innerText = `Full quantity (${rowQty} item(s)) will be marked as finished but NOT restored to stock. A damage report will be created.`;
                 icon.classList.add('bi-exclamation-triangle', 'text-warning');
                 btnConfirm.classList.add('btn-warning');
             } else if (type === 'lost') {
                 modalTitle.innerText = 'Report as Lost';
-                leadText.innerText = 'Confirm Partial/Full Lost?';
-                bodyText.innerText = 'Specified quantity will be removed from circulation and a lost report will be generated.';
+                leadText.innerText = 'Confirm Lost?';
+                bodyText.innerText = `Full quantity (${rowQty} item(s)) will be removed from circulation and a lost report will be generated.`;
                 icon.classList.add('bi-x-circle', 'text-danger');
                 btnConfirm.classList.add('btn-danger');
             }
@@ -463,19 +481,13 @@
 
             // Bind click to submit
             btnConfirm.onclick = function () {
-                const qtyVal = parseInt(modalQty.value);
-                if (isNaN(qtyVal) || qtyVal < 1 || qtyVal > maxQty) {
-                    alert(`Invalid quantity! Max: ${maxQty}`);
-                    return;
-                }
-
                 if (type !== 'good' && !modalReason.value.trim()) {
                     alert('Please provide a reason!');
                     return;
                 }
 
                 document.getElementById('returnReason').value = modalReason.value;
-                document.getElementById('returnQty').value = qtyVal;
+                document.getElementById('returnQty').value = rowQty;
                 form.submit();
             };
 
