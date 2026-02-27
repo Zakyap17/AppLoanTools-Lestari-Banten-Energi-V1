@@ -171,6 +171,31 @@
                                 @endforeach
                             @endif
 
+                            {{-- Section: Calibration Needed --}}
+                            @if(isset($notifCalibrationCount) && $notifCalibrationCount > 0)
+                                <li class="dropdown-header text-uppercase small fw-bold text-info mt-2">Calibration Needed</li>
+                                @foreach($notifCalibrationTools as $tool)
+                                    <li>
+                                        <a class="dropdown-item py-2 px-3 border-bottom border-light"
+                                            href="{{ route('calibration-issuing') }}">
+                                            <div class="d-flex align-items-start gap-2">
+                                                <div class="bg-info-subtle text-info rounded-circle p-1 d-flex align-items-center justify-content-center"
+                                                    style="width: 32px; height: 32px; flex-shrink: 0;">
+                                                    <i class="bi bi-tools"></i>
+                                                </div>
+                                                <div>
+                                                    <p class="mb-0 small fw-bold text-dark">{{ $tool->name ?? 'Unknown Tool' }}</p>
+                                                    <p class="mb-0 small text-muted">ID: {{ $tool->code ?? '-' }}</p>
+                                                    <p class="mb-0 x-small text-info">Calib. Date:
+                                                        {{ $tool->next_calibration_date ? \Carbon\Carbon::parse($tool->next_calibration_date)->format('d M') : '-' }}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </a>
+                                    </li>
+                                @endforeach
+                            @endif
+
                         @else
                             <li class="p-4 text-center">
                                 <div class="text-muted mb-2">
@@ -201,9 +226,15 @@
                         </h6>
                     </li>
                     <li>
+                        <a class="dropdown-item" href="{{ route('password.change') }}">
+                            Change Password
+                        </a>
+                    </li>
+                    <li>
                         <hr class="dropdown-divider">
                     </li>
                     <li>
+
                         <form method="POST" action="{{ route('logout') }}">
                             @csrf
                             <a class="dropdown-item text-danger" href="{{ route('logout') }}"

@@ -44,12 +44,28 @@ class NotificationComposer
 
             $lowStockCount = Tool::where('quantity', '<=', 5)->count();
 
+            // 3. Calibration Needed (H-30)
+            $today = \Carbon\Carbon::now()->startOfDay();
+            $targetDate = $today->copy()->addDays(30);
+
+            $calibrationTools = Tool::whereNotNull('next_calibration_date')
+                ->whereDate('next_calibration_date', '<=', $targetDate)
+                ->orderBy('next_calibration_date', 'asc')
+                ->take(5)
+                ->get();
+
+            $calibrationCount = Tool::whereNotNull('next_calibration_date')
+                ->whereDate('next_calibration_date', '<=', $targetDate)
+                ->count();
+
             return [
                 'notifOverdueLoans' => $overdueLoans,
                 'notifOverdueCount' => $overdueCount,
                 'notifLowStockTools' => $lowStockTools,
                 'notifLowStockCount' => $lowStockCount,
-                'totalNotifications' => $overdueCount + $lowStockCount
+                'notifCalibrationTools' => $calibrationTools,
+                'notifCalibrationCount' => $calibrationCount,
+                'totalNotifications' => $overdueCount + $lowStockCount + $calibrationCount
             ];
         });
 

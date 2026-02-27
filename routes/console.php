@@ -2,10 +2,32 @@
 
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Schedule;
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
-\Illuminate\Support\Facades\Schedule::command('loan:send-overdue-emails')->dailyAt('08:00');
-\Illuminate\Support\Facades\Schedule::command('app:send-loan-reminders')->dailyAt('08:00');
+/*
+|--------------------------------------------------------------------------
+| Scheduler 
+|--------------------------------------------------------------------------
+| 
+| - everyMinute() untuk testing
+*/
+
+Schedule::command('loan:send-overdue-emails')
+    ->timezone('Asia/Jakarta')
+    ->dailyAt('08:15');
+
+Schedule::command('app:send-loan-reminders')
+    ->timezone('Asia/Jakarta')
+    ->dailyAt('08:15');
+
+Schedule::command('app:send-calibration-reminders')
+    ->timezone('Asia/Jakarta')
+    ->dailyAt('08:15');
+
+Schedule::command('ldap:sync')
+    ->timezone('Asia/Jakarta')
+    ->everyFifteenMinutes();
