@@ -262,7 +262,7 @@
                         <option value="Loan" {{ request('report_type') == 'Loan' ? 'selected' : '' }}>Loan</option>
                         <option value="Return / Damage" {{ request('report_type') == 'Return / Damage' ? 'selected' : '' }}>
                             Return / Damage Lost</option>
-                        <option value="Receive" {{ request('report_type') == 'Receive' ? 'selected' : '' }}>Receive</option>
+                        <option value="Tools Transaction" {{ request('report_type') == 'Tools Transaction' ? 'selected' : '' }}>Tools Transaction</option>
                         <option value="Calibration" {{ request('report_type') == 'Calibration' ? 'selected' : '' }}>
                             Calibration</option>
                         <option value="Mutation" {{ request('report_type') == 'Mutation' ? 'selected' : '' }}>Mutation
@@ -654,41 +654,89 @@
     </div>
 
     {{-- OTHER TABLES (Receive, Calibration) - Placeholder --}}
+    {{-- TOOLS TRANSACTION TABLE --}}
     <div id="table-receive" class="card report-table-card"
-        style="display: {{ request('report_type') == 'Receive' ? 'block' : 'none' }};">
+        style="display: {{ request('report_type') == 'Tools Transaction' ? 'block' : 'none' }};">
         <div class="card-body">
             <div class="table-responsive">
                 <table class="table modern-table align-middle">
                     <thead>
                         <tr>
+                            <th style="width: 50px;"></th>
                             <th>No.</th>
-                            <th>Receive Date</th>
+                            <th>Entry Date</th>
                             <th>Storage</th>
                             <th>Bin</th>
                             <th>Tool No.</th>
                             <th>Description</th>
-                            <th>Asset No</th>
+                            <th>Asset No (Serial)</th>
                             <th>Condition</th>
                             <th>Qty</th>
-                            <th>Receiver</th>
+                            <th>Entered By</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        @if(request('report_type') == 'Receive')
+                    <tbody class="accordion" id="transactionAccordion">
+                        @if(request('report_type') == 'Tools Transaction')
                             @forelse($data as $index => $item)
-                                <tr>
+                                @php
+                                    $latestBorrow = $item->loans->where('status', 'history')->sortByDesc('loan_date')->first();
+                                    $latestActiveBorrow = $item->loans->where('status', 'ongoing')->first();
+                                    
+                                    // If there is an active borrow, it is the most recent borrow action
+                                    $recentBorrowDate = $latestActiveBorrow ? $latestActiveBorrow->loan_date : ($latestBorrow ? $latestBorrow->loan_date : null);
+                                    
+                                    // Latest return is the most recent actual_return_date from history
+                                    $recentReturnDate = $latestBorrow ? $latestBorrow->actual_return_date : null;
+                                @endphp
+
+                                <!-- Main Row -->
+                                <tr data-bs-toggle="collapse" data-bs-target="#collapseTransaction{{ $item->id }}" aria-expanded="false" aria-controls="collapseTransaction{{ $item->id }}" style="cursor: pointer;">
+                                    <td class="text-center">
+                                        <i class="bi bi-chevron-down text-primary" style="transition: transform 0.3s; display: inline-block;"></i>
+                                    </td>
                                     <td>{{ $index + 1 }}</td>
                                     <td>{{ $item->created_at ? $item->created_at->format('d M Y') : '-' }}</td>
-                                    <td>{{ $item->tool?->po_number ?? '-' }}</td>
                                     <td>{{ $item->tool?->location?->name ?? '-' }}</td>
                                     <td>{{ $item->tool?->rack?->code ?? '-' }}</td>
                                     <td class="text-primary fw-bold">{{ $item->tool?->code ?? '-' }}</td>
                                     <td>{{ $item->tool?->name ?? '-' }}</td>
                                     <td>{{ $item->serial_number ?? '-' }}</td>
-                                    <td>{{ $item->condition ?? 'Good' }}</td>
+                                    <td>
+                                        <span class="badge {{ strtolower($item->condition) == 'good' ? 'bg-success' : 'bg-warning text-dark' }}">
+                                            {{ $item->condition ?? 'Good' }}
+                                        </span>
+                                    </td>
                                     <td class="text-center">1</td>
-                                    <td class="text-center">
-                                        {{ $item->createdBy?->name ?? '-' }}
+                                    <td>{{ $item->createdBy?->name ?? '-' }}</td>
+                                </tr>
+
+                                <!-- Expandable Timeline Row -->
+                                <tr>
+                                    <td colspan="11" class="p-0 border-0">
+                                        <div id="collapseTransaction{{ $item->id }}" class="accordion-collapse collapse" data-bs-parent="#transactionAccordion">
+                                            <div class="px-4 py-3 bg-light">
+                                                <div class="d-flex align-items-center">
+                                                    <div class="me-4 pe-4 border-end border-2 border-secondary">
+                                                        <h6 class="text-muted mb-1 fs-xs text-uppercase fw-bold"><i class="bi bi-box-arrow-in-right me-1"></i> First Entry into System</h6>
+                                                        <div class="fs-6 fw-bold text-dark">
+                                                            {{ $item->created_at ? $item->created_at->format('d M Y, H:i') : 'Unknown' }}
+                                                        </div>
+                                                    </div>
+                                                    <div class="me-4 pe-4 border-end border-2 border-primary">
+                                                        <h6 class="text-primary mb-1 fs-xs text-uppercase fw-bold"><i class="bi bi-person-up me-1"></i> Last Borrowed</h6>
+                                                        <div class="fs-6 fw-bold text-dark">
+                                                            {{ $recentBorrowDate ? \Carbon\Carbon::parse($recentBorrowDate)->format('d M Y, H:i') : 'Never Borrowed' }}
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        <h6 class="text-success mb-1 fs-xs text-uppercase fw-bold"><i class="bi bi-person-down me-1"></i> Last Returned</h6>
+                                                        <div class="fs-6 fw-bold text-dark">
+                                                            {{ $recentReturnDate ? \Carbon\Carbon::parse($recentReturnDate)->format('d M Y, H:i') : ($latestActiveBorrow ? 'Currently Borrowed' : 'Never Returned') }}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </td>
                                 </tr>
                             @empty
@@ -696,7 +744,7 @@
                                     <td colspan="11">
                                         <div class="empty-state-table">
                                             <i class="bi bi-inbox"></i>
-                                            <h5>No Receive History Found</h5>
+                                            <h5>No Transaction History Found</h5>
                                             <p class="small">Try adjusting your filters</p>
                                         </div>
                                     </td>
@@ -704,7 +752,7 @@
                             @endforelse
                         @else
                             <tr>
-                                <td colspan="10">
+                                <td colspan="11">
                                     <div class="empty-state-table">
                                         <i class="bi bi-filter-circle"></i>
                                         <h5>Select Report Type</h5>
@@ -853,7 +901,7 @@
             'Stock Opname': 'table-stock-opname',
             'Loan': 'table-loan',
             'Return / Damage': 'table-return-damage',
-            'Receive': 'table-receive',
+            'Tools Transaction': 'table-receive',
             'Calibration': 'table-calibration',
             'Mutation': 'table-mutation'
         };

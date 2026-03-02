@@ -197,8 +197,8 @@ class ReportingCenterController extends Controller
             }
 
             $data = $query->latest()->paginate(50)->withQueryString();
-        } elseif ($reportType === 'Receive') {
-            $query = \App\Models\ToolItem::with(['tool.location', 'tool.rack', 'createdBy']);
+        } elseif ($reportType === 'Tools Transaction') {
+            $query = \App\Models\ToolItem::with(['tool.location', 'tool.rack', 'createdBy', 'loans']);
 
             if ($locationId) {
                 $query->whereHas('tool', function ($q) use ($locationId) {
@@ -492,8 +492,8 @@ class ReportingCenterController extends Controller
             }
             $filename = 'Damage_Lost_Report_' . date('Y-m-d_His') . '.xlsx';
 
-        } elseif ($reportType === 'Receive') {
-            $query = \App\Models\ToolItem::with(['tool.location', 'tool.rack', 'createdBy']);
+        } elseif ($reportType === 'Tools Transaction') {
+            $query = \App\Models\ToolItem::with(['tool.location', 'tool.rack', 'createdBy', 'loans']);
 
             if ($locationId) {
                 $query->whereHas('tool', function ($q) use ($locationId) {
@@ -549,7 +549,7 @@ class ReportingCenterController extends Controller
                     $item->createdBy?->name ?? '-'
                 ];
             }
-            $filename = 'Receive_Report_' . date('Y-m-d_His') . '.xlsx';
+            $filename = 'Tools_Transaction_Report_' . date('Y-m-d_His') . '.xlsx';
 
         } elseif ($reportType === 'Mutation') {
             $query = \App\Models\MutationLog::with(['tool', 'fromLocation', 'fromRack', 'toLocation', 'toRack', 'user']);
