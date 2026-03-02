@@ -31,3 +31,7 @@ Schedule::command('app:send-calibration-reminders')
 Schedule::command('ldap:sync')
     ->timezone('Asia/Jakarta')
     ->everyFifteenMinutes();
+
+// Run queue worker in the background for emails
+Schedule::command('queue:work --stop-when-empty')
+    ->everyMinute();
