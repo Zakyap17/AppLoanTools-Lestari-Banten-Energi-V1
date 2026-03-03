@@ -50,8 +50,20 @@ class SendLoanReminders extends Command
             $diff = $today->diffInDays($expectedReturn, false);
             $daysLeft = (int) $diff;
 
-            // Send reminder if due in 5 days or less AND not overdue (0 to 5 days)
-            if ($daysLeft >= 0 && $daysLeft <= 5) {
+            $isMonday = $today->isMonday();
+            $shouldSendReminder = false;
+
+            // Business logic:
+            // 1. If > 7 days remaining, only send on Mondays.
+            // 2. If <= 7 days remaining (but >= 0, meaning not overdue yet), send every day.
+            if ($daysLeft > 7 && $isMonday) {
+                $shouldSendReminder = true;
+            } elseif ($daysLeft >= 0 && $daysLeft <= 7) {
+                $shouldSendReminder = true;
+            }
+
+            // Send reminder if criteria met
+            if ($shouldSendReminder) {
                 if ($firstLoan->borrower && $firstLoan->borrower->email) {
                     try {
                         $mail = \Illuminate\Support\Facades\Mail::to($firstLoan->borrower->email);

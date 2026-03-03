@@ -194,7 +194,7 @@
 
                 let addedItems = [];
 
-                // --- H+7 Auto-Fill Logic ---
+                // --- 1 Month Auto-Fill Logic ---
                 const loanDateInput = document.querySelector('input[name="loan_date"]');
                 const returnDateInput = document.querySelector('input[name="expected_return_date"]');
 
@@ -202,7 +202,9 @@
                     const loanDateVal = loanDateInput.value;
                     if (loanDateVal) {
                         const date = new Date(loanDateVal);
-                        date.setDate(date.getDate() + 7); // Add 7 days
+                        
+                        // Add 1 month logically
+                        date.setMonth(date.getMonth() + 1);
 
                         // Format to YYYY-MM-DD
                         const year = date.getFullYear();
