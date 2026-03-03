@@ -733,14 +733,24 @@
                                                         <h6 class="text-primary mb-1 fs-xs text-uppercase fw-bold"><i
                                                                 class="bi bi-person-up me-1"></i> Last Borrowed</h6>
                                                         <div class="fs-6 fw-bold text-dark">
-                                                            {{ $recentBorrowDate ? \Carbon\Carbon::parse($recentBorrowDate)->format('d M Y, H:i') : 'Never Borrowed' }}
+                                                            @if($recentBorrowDate)
+                                                                {{ \Carbon\Carbon::parse($recentBorrowDate)->format('d M Y, H:i') }}
+                                                                <br><small class="text-muted fw-normal">by {{ $latestActiveBorrow ? $latestActiveBorrow->borrower?->name : ($latestBorrow ? $latestBorrow->borrower?->name : '-') }}</small>
+                                                            @else
+                                                                Never Borrowed
+                                                            @endif
                                                         </div>
                                                     </div>
                                                     <div>
                                                         <h6 class="text-success mb-1 fs-xs text-uppercase fw-bold"><i
                                                                 class="bi bi-person-down me-1"></i> Last Returned</h6>
                                                         <div class="fs-6 fw-bold text-dark">
-                                                            {{ $recentReturnDate ? \Carbon\Carbon::parse($recentReturnDate)->format('d M Y, H:i') : ($latestActiveBorrow ? 'Currently Borrowed' : 'Never Returned') }}
+                                                            @if($recentReturnDate)
+                                                                {{ \Carbon\Carbon::parse($recentReturnDate)->format('d M Y, H:i') }}
+                                                                <br><small class="text-muted fw-normal">by {{ $latestBorrow ? $latestBorrow->borrower?->name : '-' }}</small>
+                                                            @else
+                                                                {{ $latestActiveBorrow ? 'Currently Borrowed' : 'Never Returned' }}
+                                                            @endif
                                                         </div>
                                                     </div>
                                                 </div>

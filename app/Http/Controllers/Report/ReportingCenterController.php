@@ -198,7 +198,7 @@ class ReportingCenterController extends Controller
 
             $data = $query->latest()->paginate(50)->withQueryString();
         } elseif ($reportType === 'Tools Transaction') {
-            $query = \App\Models\ToolItem::with(['tool.location', 'tool.rack', 'createdBy', 'loans']);
+            $query = \App\Models\ToolItem::with(['tool.location', 'tool.rack', 'createdBy', 'loans', 'loans.borrower']);
 
             if ($locationId) {
                 $query->whereHas('tool', function ($q) use ($locationId) {
@@ -493,7 +493,7 @@ class ReportingCenterController extends Controller
             $filename = 'Damage_Lost_Report_' . date('Y-m-d_His') . '.xlsx';
 
         } elseif ($reportType === 'Tools Transaction') {
-            $query = \App\Models\ToolItem::with(['tool.location', 'tool.rack', 'createdBy', 'loans']);
+            $query = \App\Models\ToolItem::with(['tool.location', 'tool.rack', 'createdBy', 'loans', 'loans.borrower']);
 
             if ($locationId) {
                 $query->whereHas('tool', function ($q) use ($locationId) {
