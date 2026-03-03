@@ -679,20 +679,23 @@
                         @if(request('report_type') == 'Tools Transaction')
                             @forelse($data as $index => $item)
                                 @php
-                                    $latestBorrow = $item->loans->where('status', 'history')->sortByDesc('loan_date')->first();
+                                    $latestBorrow = $item->loans->whereIn('status', ['returned', 'returned_damage', 'returned_lost'])->sortByDesc('loan_date')->first();
                                     $latestActiveBorrow = $item->loans->where('status', 'ongoing')->first();
-                                    
+
                                     // If there is an active borrow, it is the most recent borrow action
                                     $recentBorrowDate = $latestActiveBorrow ? $latestActiveBorrow->loan_date : ($latestBorrow ? $latestBorrow->loan_date : null);
-                                    
+
                                     // Latest return is the most recent actual_return_date from history
                                     $recentReturnDate = $latestBorrow ? $latestBorrow->actual_return_date : null;
                                 @endphp
 
                                 <!-- Main Row -->
-                                <tr data-bs-toggle="collapse" data-bs-target="#collapseTransaction{{ $item->id }}" aria-expanded="false" aria-controls="collapseTransaction{{ $item->id }}" style="cursor: pointer;">
+                                <tr data-bs-toggle="collapse" data-bs-target="#collapseTransaction{{ $item->id }}"
+                                    aria-expanded="false" aria-controls="collapseTransaction{{ $item->id }}"
+                                    style="cursor: pointer;">
                                     <td class="text-center">
-                                        <i class="bi bi-chevron-down text-primary" style="transition: transform 0.3s; display: inline-block;"></i>
+                                        <i class="bi bi-chevron-down text-primary"
+                                            style="transition: transform 0.3s; display: inline-block;"></i>
                                     </td>
                                     <td>{{ $index + 1 }}</td>
                                     <td>{{ $item->created_at ? $item->created_at->format('d M Y') : '-' }}</td>
@@ -702,7 +705,8 @@
                                     <td>{{ $item->tool?->name ?? '-' }}</td>
                                     <td>{{ $item->serial_number ?? '-' }}</td>
                                     <td>
-                                        <span class="badge {{ strtolower($item->condition) == 'good' ? 'bg-success' : 'bg-warning text-dark' }}">
+                                        <span
+                                            class="badge {{ strtolower($item->condition) == 'good' ? 'bg-success' : 'bg-warning text-dark' }}">
                                             {{ $item->condition ?? 'Good' }}
                                         </span>
                                     </td>
@@ -713,23 +717,28 @@
                                 <!-- Expandable Timeline Row -->
                                 <tr>
                                     <td colspan="11" class="p-0 border-0">
-                                        <div id="collapseTransaction{{ $item->id }}" class="accordion-collapse collapse" data-bs-parent="#transactionAccordion">
+                                        <div id="collapseTransaction{{ $item->id }}" class="accordion-collapse collapse"
+                                            data-bs-parent="#transactionAccordion">
                                             <div class="px-4 py-3 bg-light">
                                                 <div class="d-flex align-items-center">
                                                     <div class="me-4 pe-4 border-end border-2 border-secondary">
-                                                        <h6 class="text-muted mb-1 fs-xs text-uppercase fw-bold"><i class="bi bi-box-arrow-in-right me-1"></i> First Entry into System</h6>
+                                                        <h6 class="text-muted mb-1 fs-xs text-uppercase fw-bold"><i
+                                                                class="bi bi-box-arrow-in-right me-1"></i> First Entry into System
+                                                        </h6>
                                                         <div class="fs-6 fw-bold text-dark">
                                                             {{ $item->created_at ? $item->created_at->format('d M Y, H:i') : 'Unknown' }}
                                                         </div>
                                                     </div>
                                                     <div class="me-4 pe-4 border-end border-2 border-primary">
-                                                        <h6 class="text-primary mb-1 fs-xs text-uppercase fw-bold"><i class="bi bi-person-up me-1"></i> Last Borrowed</h6>
+                                                        <h6 class="text-primary mb-1 fs-xs text-uppercase fw-bold"><i
+                                                                class="bi bi-person-up me-1"></i> Last Borrowed</h6>
                                                         <div class="fs-6 fw-bold text-dark">
                                                             {{ $recentBorrowDate ? \Carbon\Carbon::parse($recentBorrowDate)->format('d M Y, H:i') : 'Never Borrowed' }}
                                                         </div>
                                                     </div>
                                                     <div>
-                                                        <h6 class="text-success mb-1 fs-xs text-uppercase fw-bold"><i class="bi bi-person-down me-1"></i> Last Returned</h6>
+                                                        <h6 class="text-success mb-1 fs-xs text-uppercase fw-bold"><i
+                                                                class="bi bi-person-down me-1"></i> Last Returned</h6>
                                                         <div class="fs-6 fw-bold text-dark">
                                                             {{ $recentReturnDate ? \Carbon\Carbon::parse($recentReturnDate)->format('d M Y, H:i') : ($latestActiveBorrow ? 'Currently Borrowed' : 'Never Returned') }}
                                                         </div>
