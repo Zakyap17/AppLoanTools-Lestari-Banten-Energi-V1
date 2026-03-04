@@ -50,13 +50,14 @@ class ReportingCenterController extends Controller
                 $query->where('tool_items.tool_id', $toolId);
             }
             if ($search) {
-                $query->where(function ($q) use ($search) {
-                    $q->where('tools.code', 'ilike', "%{$search}%")
+                $exactSearch = trim($search);
+                $query->where(function ($q) use ($search, $exactSearch) {
+                    $q->where('tools.code', 'ilike', "{$exactSearch}")
                         ->orWhere('tools.name', 'ilike', "%{$search}%")
-                        ->orWhere('tools.serial_number', 'ilike', "%{$search}%")
+                        ->orWhere('tools.serial_number', 'ilike', "{$exactSearch}")
                         ->orWhere('locations.name', 'ilike', "%{$search}%")
                         ->orWhere('racks.code', 'ilike', "%{$search}%")
-                        ->orWhere('tool_items.serial_number', 'ilike', "%{$search}%");
+                        ->orWhere('tool_items.serial_number', 'ilike', "{$exactSearch}");
                 });
             }
             if ($employeeId) {
@@ -86,15 +87,16 @@ class ReportingCenterController extends Controller
                 $query->where('loans.tool_id', $toolId);
             }
             if ($search) {
-                $query->where(function ($q) use ($search) {
-                    $q->where('loans.loan_code', 'ilike', "%{$search}%")
-                        ->orWhere('tools.code', 'ilike', "%{$search}%")
+                $exactSearch = trim($search);
+                $query->where(function ($q) use ($search, $exactSearch) {
+                    $q->where('loans.loan_code', 'ilike', "{$exactSearch}")
+                        ->orWhere('tools.code', 'ilike', "{$exactSearch}")
                         ->orWhere('tools.name', 'ilike', "%{$search}%")
-                        ->orWhere('tools.serial_number', 'ilike', "%{$search}%")
+                        ->orWhere('tools.serial_number', 'ilike', "{$exactSearch}")
                         ->orWhere('locations.name', 'ilike', "%{$search}%")
                         ->orWhere('racks.code', 'ilike', "%{$search}%")
                         ->orWhere('borrowers.name', 'ilike', "%{$search}%")
-                        ->orWhere('tool_items.serial_number', 'ilike', "%{$search}%");
+                        ->orWhere('tool_items.serial_number', 'ilike', "{$exactSearch}");
                 });
             }
             if ($employeeId) {
@@ -125,13 +127,14 @@ class ReportingCenterController extends Controller
                 $query->where('tool_id', $toolId);
             }
             if ($search) {
-                $query->where(function ($q) use ($search) {
-                    $q->where('report_code', 'ilike', "%{$search}%")
+                $exactSearch = trim($search);
+                $query->where(function ($q) use ($search, $exactSearch) {
+                    $q->where('report_code', 'ilike', "{$exactSearch}")
                         ->orWhere('description', 'ilike', "%{$search}%")
-                        ->orWhereHas('tool', function ($sub) use ($search) {
-                            $sub->where('code', 'ilike', "%{$search}%")
+                        ->orWhereHas('tool', function ($sub) use ($search, $exactSearch) {
+                            $sub->where('code', 'ilike', "{$exactSearch}")
                                 ->orWhere('name', 'ilike', "%{$search}%")
-                                ->orWhere('serial_number', 'ilike', "%{$search}%")
+                                ->orWhere('serial_number', 'ilike', "{$exactSearch}")
                                 ->orWhereHas('location', function ($loc) use ($search) {
                                     $loc->where('name', 'ilike', "%{$search}%");
                                 })
@@ -142,8 +145,8 @@ class ReportingCenterController extends Controller
                         ->orWhereHas('employee', function ($sub) use ($search) {
                             $sub->where('name', 'ilike', "%{$search}%");
                         })
-                        ->orWhereHas('item', function ($sub) use ($search) {
-                            $sub->where('serial_number', 'ilike', "%{$search}%");
+                        ->orWhereHas('item', function ($sub) use ($exactSearch) {
+                            $sub->where('serial_number', 'ilike', "{$exactSearch}");
                         });
                 });
             }
@@ -175,12 +178,13 @@ class ReportingCenterController extends Controller
                 $query->where('tool_id', $toolId);
             }
             if ($search) {
-                $query->where(function ($q) use ($search) {
-                    $q->where('issue_code', 'ilike', "%{$search}%")
-                        ->orWhereHas('tool', function ($sub) use ($search) {
-                            $sub->where('code', 'ilike', "%{$search}%")
+                $exactSearch = trim($search);
+                $query->where(function ($q) use ($search, $exactSearch) {
+                    $q->where('issue_code', 'ilike', "{$exactSearch}")
+                        ->orWhereHas('tool', function ($sub) use ($search, $exactSearch) {
+                            $sub->where('code', 'ilike', "{$exactSearch}")
                                 ->orWhere('name', 'ilike', "%{$search}%")
-                                ->orWhere('serial_number', 'ilike', "%{$search}%")
+                                ->orWhere('serial_number', 'ilike', "{$exactSearch}")
                                 ->orWhereHas('location', function ($loc) use ($search) {
                                     $loc->where('name', 'ilike', "%{$search}%");
                                 })
@@ -218,12 +222,13 @@ class ReportingCenterController extends Controller
                 $query->where('tool_id', $toolId);
             }
             if ($search) {
-                $query->where(function ($q) use ($search) {
-                    $q->whereHas('tool', function ($sub) use ($search) {
-                        $sub->where('code', 'ilike', "%{$search}%")
+                $exactSearch = trim($search);
+                $query->where(function ($q) use ($search, $exactSearch) {
+                    $q->whereHas('tool', function ($sub) use ($search, $exactSearch) {
+                        $sub->where('code', 'ilike', "{$exactSearch}")
                             ->orWhere('name', 'ilike', "%{$search}%")
-                            ->orWhere('serial_number', 'ilike', "%{$search}%")
-                            ->orWhere('po_number', 'ilike', "%{$search}%")
+                            ->orWhere('serial_number', 'ilike', "{$exactSearch}")
+                            ->orWhere('po_number', 'ilike', "{$exactSearch}")
                             ->orWhereHas('location', function ($loc) use ($search) {
                                 $loc->where('name', 'ilike', "%{$search}%");
                             })
@@ -231,7 +236,7 @@ class ReportingCenterController extends Controller
                                 $rack->where('code', 'ilike', "%{$search}%");
                             });
                     })
-                        ->orWhere('serial_number', 'ilike', "%{$search}%");
+                        ->orWhere('serial_number', 'ilike', "{$exactSearch}");
                 });
             }
             if ($dateFrom) {
@@ -255,11 +260,12 @@ class ReportingCenterController extends Controller
                 $query->where('tool_id', $toolId);
             }
             if ($search) {
-                $query->where(function ($q) use ($search) {
-                    $q->whereHas('tool', function ($sub) use ($search) {
-                        $sub->where('code', 'ilike', "%{$search}%")
+                $exactSearch = trim($search);
+                $query->where(function ($q) use ($search, $exactSearch) {
+                    $q->whereHas('tool', function ($sub) use ($search, $exactSearch) {
+                        $sub->where('code', 'ilike', "{$exactSearch}")
                             ->orWhere('name', 'ilike', "%{$search}%")
-                            ->orWhere('serial_number', 'ilike', "%{$search}%");
+                            ->orWhere('serial_number', 'ilike', "{$exactSearch}");
                     })
                         ->orWhereHas('user', function ($sub) use ($search) {
                             $sub->where('name', 'ilike', "%{$search}%");
@@ -328,11 +334,12 @@ class ReportingCenterController extends Controller
                 $query->where('tool_id', $toolId);
             }
             if ($search) {
-                $query->where(function ($q) use ($search) {
-                    $q->whereHas('tool', function ($sub) use ($search) {
-                        $sub->where('code', 'ilike', "%{$search}%")
+                $exactSearch = trim($search);
+                $query->where(function ($q) use ($search, $exactSearch) {
+                    $q->whereHas('tool', function ($sub) use ($search, $exactSearch) {
+                        $sub->where('code', 'ilike', "{$exactSearch}")
                             ->orWhere('name', 'ilike', "%{$search}%")
-                            ->orWhere('serial_number', 'ilike', "%{$search}%")
+                            ->orWhere('serial_number', 'ilike', "{$exactSearch}")
                             ->orWhereHas('location', function ($loc) use ($search) {
                                 $loc->where('name', 'ilike', "%{$search}%");
                             })
@@ -340,7 +347,7 @@ class ReportingCenterController extends Controller
                                 $rack->where('code', 'ilike', "%{$search}%");
                             });
                     })
-                        ->orWhere('serial_number', 'ilike', "%{$search}%");
+                        ->orWhere('serial_number', 'ilike', "{$exactSearch}");
                 });
             }
 
@@ -384,12 +391,13 @@ class ReportingCenterController extends Controller
                 $query->where('tool_id', $toolId);
             }
             if ($search) {
-                $query->where(function ($q) use ($search) {
-                    $q->where('loan_code', 'ilike', "%{$search}%")
-                        ->orWhereHas('tool', function ($sub) use ($search) {
-                            $sub->where('code', 'ilike', "%{$search}%")
+                $exactSearch = trim($search);
+                $query->where(function ($q) use ($search, $exactSearch) {
+                    $q->where('loan_code', 'ilike', "{$exactSearch}")
+                        ->orWhereHas('tool', function ($sub) use ($search, $exactSearch) {
+                            $sub->where('code', 'ilike', "{$exactSearch}")
                                 ->orWhere('name', 'ilike', "%{$search}%")
-                                ->orWhere('serial_number', 'ilike', "%{$search}%")
+                                ->orWhere('serial_number', 'ilike', "{$exactSearch}")
                                 ->orWhereHas('location', function ($loc) use ($search) {
                                     $loc->where('name', 'ilike', "%{$search}%");
                                 })
@@ -450,13 +458,14 @@ class ReportingCenterController extends Controller
                 $query->where('tool_id', $toolId);
             }
             if ($search) {
-                $query->where(function ($q) use ($search) {
-                    $q->where('report_code', 'ilike', "%{$search}%")
+                $exactSearch = trim($search);
+                $query->where(function ($q) use ($search, $exactSearch) {
+                    $q->where('report_code', 'ilike', "{$exactSearch}")
                         ->orWhere('description', 'ilike', "%{$search}%")
-                        ->orWhereHas('tool', function ($sub) use ($search) {
-                            $sub->where('code', 'ilike', "%{$search}%")
+                        ->orWhereHas('tool', function ($sub) use ($search, $exactSearch) {
+                            $sub->where('code', 'ilike', "{$exactSearch}")
                                 ->orWhere('name', 'ilike', "%{$search}%")
-                                ->orWhere('serial_number', 'ilike', "%{$search}%")
+                                ->orWhere('serial_number', 'ilike', "{$exactSearch}")
                                 ->orWhereHas('location', function ($loc) use ($search) {
                                     $loc->where('name', 'ilike', "%{$search}%");
                                 })
@@ -467,8 +476,8 @@ class ReportingCenterController extends Controller
                         ->orWhereHas('employee', function ($sub) use ($search) {
                             $sub->where('name', 'ilike', "%{$search}%");
                         })
-                        ->orWhereHas('item', function ($sub) use ($search) {
-                            $sub->where('serial_number', 'ilike', "%{$search}%");
+                        ->orWhereHas('item', function ($sub) use ($exactSearch) {
+                            $sub->where('serial_number', 'ilike', "{$exactSearch}");
                         });
                 });
             }
@@ -518,12 +527,13 @@ class ReportingCenterController extends Controller
                 $query->where('tool_id', $toolId);
             }
             if ($search) {
-                $query->where(function ($q) use ($search) {
-                    $q->whereHas('tool', function ($sub) use ($search) {
-                        $sub->where('code', 'ilike', "%{$search}%")
+                $exactSearch = trim($search);
+                $query->where(function ($q) use ($search, $exactSearch) {
+                    $q->whereHas('tool', function ($sub) use ($search, $exactSearch) {
+                        $sub->where('code', 'ilike', "{$exactSearch}")
                             ->orWhere('name', 'ilike', "%{$search}%")
-                            ->orWhere('serial_number', 'ilike', "%{$search}%")
-                            ->orWhere('po_number', 'ilike', "%{$search}%")
+                            ->orWhere('serial_number', 'ilike', "{$exactSearch}")
+                            ->orWhere('po_number', 'ilike', "{$exactSearch}")
                             ->orWhereHas('location', function ($loc) use ($search) {
                                 $loc->where('name', 'ilike', "%{$search}%");
                             })
@@ -531,7 +541,7 @@ class ReportingCenterController extends Controller
                                 $rack->where('code', 'ilike', "%{$search}%");
                             });
                     })
-                        ->orWhere('serial_number', 'ilike', "%{$search}%");
+                        ->orWhere('serial_number', 'ilike', "{$exactSearch}");
                 });
             }
             if ($dateFrom) {
@@ -574,11 +584,12 @@ class ReportingCenterController extends Controller
                 $query->where('tool_id', $toolId);
             }
             if ($search) {
-                $query->where(function ($q) use ($search) {
-                    $q->whereHas('tool', function ($sub) use ($search) {
-                        $sub->where('code', 'ilike', "%{$search}%")
+                $exactSearch = trim($search);
+                $query->where(function ($q) use ($search, $exactSearch) {
+                    $q->whereHas('tool', function ($sub) use ($search, $exactSearch) {
+                        $sub->where('code', 'ilike', "{$exactSearch}")
                             ->orWhere('name', 'ilike', "%{$search}%")
-                            ->orWhere('serial_number', 'ilike', "%{$search}%");
+                            ->orWhere('serial_number', 'ilike', "{$exactSearch}");
                     })
                         ->orWhereHas('user', function ($sub) use ($search) {
                             $sub->where('name', 'ilike', "%{$search}%");
