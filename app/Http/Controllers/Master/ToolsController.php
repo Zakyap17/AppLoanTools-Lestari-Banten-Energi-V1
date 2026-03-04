@@ -570,10 +570,17 @@ class ToolsController extends Controller
                 while (Location::where('code', $locCode)->exists()) {
                     $locCode = $baseCode . '-' . rand(100, 999);
                 }
+                $lowerLocName = strtolower($locName);
+                $detectedWarehouse = 'Indoor'; // Default to Indoor
+                if (str_contains($lowerLocName, 'outdoor') || str_contains($lowerLocName, 'container')) {
+                    $detectedWarehouse = 'Outdoor';
+                }
+
                 $loc = Location::create([
                     'code' => $locCode,
                     'name' => $locName,
                     'storage_type' => 'Loan Tools',
+                    'warehouse' => $detectedWarehouse,
                     'total_bin' => 0
                 ]);
             }
