@@ -527,7 +527,21 @@ class ToolsController extends Controller
             $manf = Manufacturer::whereRaw('LOWER(TRIM(name)) = ?', [strtolower($manfName)])
                 ->orWhereRaw('LOWER(TRIM(code)) = ?', [strtolower($manfName)])
                 ->first();
-            $manfId = $manf ? $manf->id : null;
+
+            if (!$manf) {
+                $baseCode = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $manfName), 0, 3));
+                if (empty($baseCode))
+                    $baseCode = 'MFG';
+                $manfCode = $baseCode . '-' . rand(100, 999);
+                while (Manufacturer::where('code', $manfCode)->exists()) {
+                    $manfCode = $baseCode . '-' . rand(100, 999);
+                }
+                $manf = Manufacturer::create([
+                    'code' => $manfCode,
+                    'name' => $manfName,
+                ]);
+            }
+            $manfId = $manf->id;
         }
 
         $locId = null;
@@ -537,23 +551,41 @@ class ToolsController extends Controller
             $loc = Location::whereRaw('LOWER(TRIM(name)) = ?', [strtolower($locName)])
                 ->orWhereRaw('LOWER(TRIM(code)) = ?', [strtolower($locName)])
                 ->first();
-            if ($loc) {
-                $locId = $loc->id;
-                if ($rackCode) {
-                    // Rack search needs to span the location
-                    $rack = \App\Models\Rack::where('location_id', $locId)
-                        ->where(function ($q) use ($rackCode) {
-                            $q->whereRaw('LOWER(TRIM(code)) = ?', [strtolower($rackCode)])
-                                ->orWhereRaw('LOWER(TRIM(description)) = ?', [strtolower($rackCode)]);
-                        })->first();
-                    if ($rack) {
-                        $rackId = $rack->id;
-                    } else {
-                        $warnings[] = "Row $rowLine: Bin '$rackCode' not found in '$locName'.";
-                    }
+
+            if (!$loc) {
+                $baseCode = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $locName), 0, 3));
+                if (empty($baseCode))
+                    $baseCode = 'LOC';
+                $locCode = $baseCode . '-' . rand(100, 999);
+                while (Location::where('code', $locCode)->exists()) {
+                    $locCode = $baseCode . '-' . rand(100, 999);
                 }
-            } else {
-                $warnings[] = "Row $rowLine: Location '$locName' not found.";
+                $loc = Location::create([
+                    'code' => $locCode,
+                    'name' => $locName,
+                    'storage_type' => 'Loan Tools',
+                    'total_bin' => 0
+                ]);
+            }
+            $locId = $loc->id;
+
+            if ($rackCode) {
+                // Rack search needs to span the location
+                $rack = \App\Models\Rack::where('location_id', $locId)
+                    ->where(function ($q) use ($rackCode) {
+                        $q->whereRaw('LOWER(TRIM(code)) = ?', [strtolower($rackCode)])
+                            ->orWhereRaw('LOWER(TRIM(description)) = ?', [strtolower($rackCode)]);
+                    })->first();
+
+                if (!$rack) {
+                    $rack = \App\Models\Rack::create([
+                        'location_id' => $locId,
+                        'code' => $rackCode,
+                        'description' => $rackCode
+                    ]);
+                    $loc->increment('total_bin');
+                }
+                $rackId = $rack->id;
             }
         }
 
