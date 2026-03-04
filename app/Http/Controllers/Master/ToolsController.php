@@ -492,12 +492,22 @@ class ToolsController extends Controller
         $assetNo = isset($data[1]) ? $data[1] : '';
         $desc = isset($data[2]) ? $data[2] : '';
 
+        // Auto Generate Code if empty/dash
+        if (empty($code) || $code === '-' || strtolower($code) === 'auto') {
+            $code = $this->generateNextCode();
+        }
+
+        // Auto Generate Asset No if empty/dash
+        if (empty($assetNo) || $assetNo === '-' || strtolower($assetNo) === 'auto') {
+            $assetNo = $this->generateNextAssetNo();
+        }
+
         // Basic validation
-        if (empty($code) || empty($desc)) {
+        if (empty($desc)) {
             // Check if it's just a trailing empty row
             if (empty(implode('', $data)))
                 return [];
-            throw new \Exception("Code and Description are required.");
+            throw new \Exception("Description is required.");
         }
 
         $typeName = isset($data[3]) ? $data[3] : '';
