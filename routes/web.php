@@ -54,8 +54,8 @@ Route::middleware(['auth'])->group(function () {
     /*Dashboard*/
     Route::get('/dashboard', [DashboardController::class, 'index'])
         ->name('dashboard');
-
-
+    Route::post('/dashboard/clear-notifications', [DashboardController::class, 'clearNotifications'])
+        ->name('notifications.clear');
     /* Master Tools */
     // Locations
     Route::get('/locations/template', [LocationsController::class, 'template'])->name('locations.template');

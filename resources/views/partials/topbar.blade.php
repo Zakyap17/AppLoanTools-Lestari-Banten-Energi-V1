@@ -97,7 +97,7 @@
                     style="width: 32px; height: 32px;" data-bs-toggle="dropdown" aria-expanded="false">
                     <i class="bi bi-bell" style="font-size: 1.25rem;"></i>
                     @if (isset($totalNotifications) && $totalNotifications > 0)
-                        <span
+                        <span id="notif-badge"
                             class="position-absolute border border-white rounded-circle bg-danger d-flex align-items-center justify-content-center text-white"
                             style="top: 2px; right: 0px; width: 16px; height: 16px; font-size: 0.65rem; font-weight: bold;">
                             {{ $totalNotifications > 9 ? '9+' : $totalNotifications }}
@@ -110,12 +110,17 @@
                     style="width: 320px;">
                     <li class="bg-light p-3 border-bottom d-flex justify-content-between align-items-center">
                         <h6 class="mb-0 fw-bold text-dark">Notifications</h6>
-                        @if (isset($totalNotifications) && $totalNotifications > 0)
-                            <span class="badge bg-primary rounded-pill">{{ $totalNotifications }} New</span>
-                        @endif
+                        <div>
+                            @if (isset($totalNotifications) && $totalNotifications > 0)
+                                <span id="notif-count-badge" class="badge bg-primary rounded-pill me-2">{{ $totalNotifications }} New</span>
+                                <button class="btn btn-sm btn-outline-secondary" onclick="clearNotifications()" style="font-size: 0.70rem;">
+                                    <i class="bi bi-x-circle me-1"></i>Clear
+                                </button>
+                            @endif
+                        </div>
                     </li>
 
-                    <div style="max-height: 400px; overflow-y: auto;">
+                    <div id="notif-list-container" style="max-height: 400px; overflow-y: auto;">
                         @if (isset($totalNotifications) && $totalNotifications > 0)
 
                             {{-- Section: Overdue Loans --}}
@@ -245,7 +250,47 @@
                     </li>
                 </ul>
             </div>
+            </div>
         </div>
     </div>
-
+    
+    <script>
+    function clearNotifications() {
+        const ids = {
+            overdue: @json(isset($notifOverdueLoans) ? $notifOverdueLoans->pluck('id') : []),
+            low_stock: @json(isset($notifLowStockTools) ? $notifLowStockTools->pluck('id') : []),
+            calibration: @json(isset($notifCalibrationTools) ? $notifCalibrationTools->pluck('id') : [])
+        };
+    
+        fetch('{{ route('notifications.clear') }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            },
+            body: JSON.stringify({ type: 'all', ids: ids })
+        }).then(response => {
+            if(response.ok) {
+                // Instantly remove DOM elements to reflect cleared status smoothly
+                const notifBadge = document.getElementById('notif-badge');
+                if (notifBadge) notifBadge.remove();
+                
+                const notifCountBadge = document.getElementById('notif-count-badge');
+                if (notifCountBadge) notifCountBadge.remove();
+                
+                const notifContainer = document.getElementById('notif-list-container');
+                if (notifContainer) {
+                    notifContainer.innerHTML = `
+                        <li class="p-4 text-center">
+                            <div class="text-muted mb-2">
+                                <i class="bi bi-bell-slash" style="font-size: 2rem;"></i>
+                            </div>
+                            <p class="mb-0 small text-muted">No new notifications</p>
+                        </li>
+                    `;
+                }
+            }
+        });
+    }
+    </script>
 </div>
