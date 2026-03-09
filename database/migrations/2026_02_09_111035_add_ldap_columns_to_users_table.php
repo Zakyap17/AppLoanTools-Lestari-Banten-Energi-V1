@@ -11,8 +11,12 @@ return new class extends Migration {
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->string('guid')->unique()->nullable()->after('id');
-            $table->boolean('is_active')->default(true)->after('password');
+            if (!Schema::hasColumn('users', 'guid')) {
+                $table->string('guid')->unique()->nullable()->after('id');
+            }
+            if (!Schema::hasColumn('users', 'is_active')) {
+                $table->boolean('is_active')->default(true)->after('password');
+            }
         });
     }
 
@@ -22,7 +26,12 @@ return new class extends Migration {
     public function down(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->dropColumn(['guid', 'is_active']);
+            if (Schema::hasColumn('users', 'guid')) {
+                $table->dropColumn('guid');
+            }
+            if (Schema::hasColumn('users', 'is_active')) {
+                $table->dropColumn('is_active');
+            }
         });
     }
 };

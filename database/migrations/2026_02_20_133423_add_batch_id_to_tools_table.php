@@ -11,7 +11,9 @@ return new class extends Migration {
     public function up(): void
     {
         Schema::table('tools', function (Blueprint $table) {
-            $table->string('batch_id')->nullable()->after('id')->index();
+            if (!Schema::hasColumn('tools', 'batch_id')) {
+                $table->string('batch_id')->nullable()->after('id')->index();
+            }
         });
     }
 
@@ -21,7 +23,10 @@ return new class extends Migration {
     public function down(): void
     {
         Schema::table('tools', function (Blueprint $table) {
-            //
+            if (Schema::hasColumn('tools', 'batch_id')) {
+                // Drop index first if needed, but dropping column drops the index automatically in PG
+                $table->dropColumn('batch_id');
+            }
         });
     }
 };
