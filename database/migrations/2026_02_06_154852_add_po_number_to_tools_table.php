@@ -8,20 +8,18 @@ return new class extends Migration {
     /**
      * Run the migrations.
      */
-    public function up(): void
-    {
-        Schema::table('tools', function (Blueprint $row) {
-            $row->string('po_number')->nullable()->after('serial_number');
-        });
-    }
+        if (!Schema::hasColumn('tools', 'po_number')) {
+            Schema::table('tools', function (Blueprint $row) {
+                $row->string('po_number')->nullable()->after('serial_number');
+            });
+        }
 
     /**
      * Reverse the migrations.
      */
-    public function down(): void
-    {
-        Schema::table('tools', function (Blueprint $row) {
-            $row->dropColumn('po_number');
-        });
-    }
+        if (Schema::hasColumn('tools', 'po_number')) {
+            Schema::table('tools', function (Blueprint $row) {
+                $row->dropColumn('po_number');
+            });
+        }
 };
