@@ -528,8 +528,11 @@ class ToolsController extends Controller
             if ($type) {
                 $typeId = $type->id;
             } else {
-                $baseCode = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $typeName), 0, 3));
-                if (empty($baseCode)) $baseCode = 'TYP';
+                $acronym = '';
+                foreach (explode(' ', trim(preg_replace('/[^A-Za-z0-9 ]/', '', $typeName))) as $word) {
+                    if (!empty($word)) $acronym .= strtoupper($word[0]);
+                }
+                $baseCode = $acronym ?: 'TYP';
                 $typeCode = $baseCode . '-' . rand(100, 999);
                 while (ToolType::where('code', $typeCode)->exists()) {
                     $typeCode = $baseCode . '-' . rand(100, 999);
@@ -557,8 +560,11 @@ class ToolsController extends Controller
                     ->first();
                     
                 if (!$mainGroup) {
-                    $baseCode = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $groupName), 0, 3));
-                    if (empty($baseCode)) $baseCode = 'MAT';
+                    $acronym = '';
+                    foreach (explode(' ', trim(preg_replace('/[^A-Za-z0-9 ]/', '', $groupName))) as $word) {
+                        if (!empty($word)) $acronym .= strtoupper($word[0]);
+                    }
+                    $baseCode = $acronym ?: 'MAT';
                     $mainCode = $baseCode . '-' . rand(100, 999);
                     while (\App\Models\ToolsMatGroup::where('code', $mainCode)->exists()) {
                         $mainCode = $baseCode . '-' . rand(100, 999);
@@ -569,8 +575,11 @@ class ToolsController extends Controller
                     ]);
                 }
                 
-                $subBaseCode = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $groupName), 0, 3));
-                if (empty($subBaseCode)) $subBaseCode = 'SUB';
+                $subAcronym = '';
+                foreach (explode(' ', trim(preg_replace('/[^A-Za-z0-9 ]/', '', $groupName))) as $word) {
+                    if (!empty($word)) $subAcronym .= strtoupper($word[0]);
+                }
+                $subBaseCode = $subAcronym ?: 'SUB';
                 $subCode = $subBaseCode . '-' . rand(1000, 9999);
                 while (\App\Models\ToolsMatSubGroup::where('sub_code', $subCode)->exists()) {
                     $subCode = $subBaseCode . '-' . rand(1000, 9999);
