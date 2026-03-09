@@ -673,6 +673,7 @@
                             <th>Condition</th>
                             <th>Qty</th>
                             <th>Entered By</th>
+                            <th>Deleted By</th>
                         </tr>
                     </thead>
                     <tbody class="accordion" id="transactionAccordion">
@@ -724,11 +725,18 @@
                                     </td>
                                     <td class="text-center">1</td>
                                     <td>{{ $item->createdBy?->name ?? '-' }}</td>
+                                    <td>
+                                        @if($item->trashed())
+                                            <span class="text-danger fw-bold"><i class="bi bi-person-x"></i> {{ $item->deletedBy->name ?? 'Unknown' }}</span>
+                                        @else
+                                            <span class="text-muted">-</span>
+                                        @endif
+                                    </td>
                                 </tr>
 
                                 <!-- Expandable Timeline Row -->
                                 <tr>
-                                    <td colspan="11" class="p-0 border-0">
+                                    <td colspan="12" class="p-0 border-0">
                                         <div id="collapseTransaction{{ $item->id }}" class="accordion-collapse collapse"
                                             data-bs-parent="#transactionAccordion">
                                             <div class="px-4 py-3 bg-light">
@@ -783,7 +791,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="11">
+                                    <td colspan="12">
                                         <div class="empty-state-table">
                                             <i class="bi bi-inbox"></i>
                                             <h5>No Transaction History Found</h5>

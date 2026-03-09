@@ -331,6 +331,8 @@ class ToolsController extends Controller
         
         // Ensure all related tool items are marked with deleted_by before cascade deletes
         $tool->items()->update(['deleted_by' => auth()->id()]);
+        
+        $tool->items()->delete();
 
         $tool->delete();
 

@@ -38,7 +38,7 @@ class ReportingCenterController extends Controller
                 ->join('tools', 'tool_items.tool_id', '=', 'tools.id')
                 ->leftJoin('locations', 'tools.location_id', '=', 'locations.id')
                 ->leftJoin('racks', 'tools.rack_id', '=', 'racks.id')
-                ->with(['tool.location', 'tool.rack', 'activeDamageReport']);
+                ->with(['tool' => function($q) { $q->withTrashed()->with(['location', 'rack']); }, 'activeDamageReport']);
 
             if ($locationId) {
                 $query->where('tools.location_id', $locationId);
@@ -75,7 +75,7 @@ class ReportingCenterController extends Controller
                 ->leftJoin('racks', 'tools.rack_id', '=', 'racks.id')
                 ->leftJoin('employees as borrowers', 'loans.employee_id', '=', 'borrowers.id')
                 ->leftJoin('tool_items', 'loans.tool_item_id', '=', 'tool_items.id')
-                ->with(['tool.location', 'tool.rack', 'borrower']);
+                ->with(['tool' => function($q){ $q->withTrashed()->with(['location', 'rack']); }, 'borrower']);
 
             if ($locationId) {
                 $query->where('tools.location_id', $locationId);
@@ -111,7 +111,7 @@ class ReportingCenterController extends Controller
 
             $data = $query->latest('loans.created_at')->paginate(50)->withQueryString();
         } elseif ($reportType === 'Return / Damage') {
-            $query = \App\Models\DamageLost::with(['tool.location', 'tool.rack', 'employee']);
+            $query = \App\Models\DamageLost::with(['tool' => function($q){ $q->withTrashed()->with(['location', 'rack']); }, 'employee']);
 
             if ($locationId) {
                 $query->whereHas('tool', function ($q) use ($locationId) {
@@ -162,7 +162,7 @@ class ReportingCenterController extends Controller
 
             $data = $query->latest()->paginate(50)->withQueryString();
         } elseif ($reportType === 'Calibration') {
-            $query = \App\Models\CalibrationIssuing::with(['tool.location', 'tool.rack', 'vendor']);
+            $query = \App\Models\CalibrationIssuing::with(['tool' => function($q) { $q->withTrashed()->with(['location', 'rack']); }, 'vendor']);
 
             if ($locationId) {
                 $query->whereHas('tool', function ($q) use ($locationId) {
@@ -252,7 +252,7 @@ class ReportingCenterController extends Controller
 
             $data = $query->latest()->paginate(50)->withQueryString();
         } elseif ($reportType === 'Mutation') {
-            $query = \App\Models\MutationLog::with(['tool', 'fromLocation', 'fromRack', 'toLocation', 'toRack', 'user']);
+            $query = \App\Models\MutationLog::with(['tool' => function($q) { $q->withTrashed(); }, 'fromLocation', 'fromRack', 'toLocation', 'toRack', 'user']);
 
             if ($locationId) {
                 $query->where('to_location_id', $locationId);
