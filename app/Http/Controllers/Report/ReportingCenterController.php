@@ -212,12 +212,12 @@ class ReportingCenterController extends Controller
 
             if ($locationId) {
                 $query->whereHas('tool', function ($q) use ($locationId) {
-                    $q->where('location_id', $locationId);
+                    $q->withTrashed()->where('location_id', $locationId);
                 });
             }
             if ($rackId) {
                 $query->whereHas('tool', function ($q) use ($rackId) {
-                    $q->where('rack_id', $rackId);
+                    $q->withTrashed()->where('rack_id', $rackId);
                 });
             }
             if ($toolId) {
@@ -227,16 +227,18 @@ class ReportingCenterController extends Controller
                 $exactSearch = trim($search);
                 $query->where(function ($q) use ($search, $exactSearch) {
                     $q->whereHas('tool', function ($sub) use ($search, $exactSearch) {
-                        $sub->where('code', 'ilike', "{$exactSearch}")
-                            ->orWhere('name', 'ilike', "%{$search}%")
-                            ->orWhere('serial_number', 'ilike', "{$exactSearch}")
-                            ->orWhere('po_number', 'ilike', "{$exactSearch}")
-                            ->orWhereHas('location', function ($loc) use ($search) {
-                                $loc->where('name', 'ilike', "%{$search}%");
-                            })
-                            ->orWhereHas('rack', function ($rack) use ($search) {
-                                $rack->where('code', 'ilike', "%{$search}%");
-                            });
+                        $sub->withTrashed()->where(function($inner) use ($search, $exactSearch) {
+                            $inner->where('code', 'ilike', "{$exactSearch}")
+                                ->orWhere('name', 'ilike', "%{$search}%")
+                                ->orWhere('serial_number', 'ilike', "{$exactSearch}")
+                                ->orWhere('po_number', 'ilike', "{$exactSearch}")
+                                ->orWhereHas('location', function ($loc) use ($search) {
+                                    $loc->where('name', 'ilike', "%{$search}%");
+                                })
+                                ->orWhereHas('rack', function ($rack) use ($search) {
+                                    $rack->where('code', 'ilike', "%{$search}%");
+                                });
+                        });
                     })
                         ->orWhere('serial_number', 'ilike', "{$exactSearch}");
                 });

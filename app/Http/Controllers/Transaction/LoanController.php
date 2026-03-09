@@ -197,15 +197,25 @@ class LoanController extends Controller
         $term = '%' . $search . '%';
 
         // Using lowercase 'ilike' for consistency with other working controllers
-        $tools = \App\Models\Tool::with([
-            'items' => function ($q) {
+        $query = \App\Models\Tool::query();
+
+        if ($request->has('include_trashed')) {
+            $query->withTrashed()->with(['items' => function ($q) {
+                $q->withTrashed();
+            }]);
+        } else {
+            $query->with(['items' => function ($q) {
                 $q->where('status', 'available');
-            }
-        ])
-            ->where(function ($q) use ($term) {
+            }]);
+        }
+
+        $tools = $query->where(function ($q) use ($term, $request) {
                 $q->where('code', 'ilike', $term)
                     ->orWhere('name', 'ilike', $term)
-                    ->orWhereHas('items', function ($sub) use ($term) {
+                    ->orWhereHas('items', function ($sub) use ($term, $request) {
+                        if ($request->has('include_trashed')) {
+                            $sub->withTrashed();
+                        }
                         $sub->where('serial_number', 'ilike', $term);
                     });
             })

@@ -916,7 +916,7 @@
                         delay: 250, // Reduced delay for faster response
                         data: function (params) {
                             console.log('Searching for:', params.term);
-                            return { q: params.term };
+                            return { q: params.term, include_trashed: 1 };
                         },
                         processResults: function (data) {
                             console.log('Search results received:', data);
