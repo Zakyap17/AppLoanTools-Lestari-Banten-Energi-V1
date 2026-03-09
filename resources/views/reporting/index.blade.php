@@ -701,9 +701,21 @@
                                     <td>{{ $item->created_at ? $item->created_at->format('d M Y') : '-' }}</td>
                                     <td>{{ $item->tool?->location?->name ?? '-' }}</td>
                                     <td>{{ $item->tool?->rack?->code ?? '-' }}</td>
-                                    <td class="text-primary fw-bold">{{ $item->tool?->code ?? '-' }}</td>
-                                    <td>{{ $item->tool?->name ?? '-' }}</td>
-                                    <td>{{ $item->serial_number ?? '-' }}</td>
+                                    <td>
+                                        <span class="text-primary fw-bold {{ $item->trashed() ? 'text-decoration-line-through text-danger' : '' }}">
+                                            {{ $item->tool?->code ?? '-' }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="{{ $item->trashed() ? 'text-decoration-line-through text-danger' : '' }}">
+                                            {{ $item->tool?->name ?? '-' }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="{{ $item->trashed() ? 'text-decoration-line-through text-danger' : '' }}">
+                                            {{ $item->serial_number ?? '-' }}
+                                        </span>
+                                    </td>
                                     <td>
                                         <span
                                             class="badge {{ strtolower($item->condition) == 'good' ? 'bg-success' : 'bg-warning text-dark' }}">
@@ -753,6 +765,17 @@
                                                             @endif
                                                         </div>
                                                     </div>
+
+                                                    @if($item->trashed())
+                                                    <div class="ms-4 ps-4 border-start border-2 border-danger">
+                                                        <h6 class="text-danger mb-1 fs-xs text-uppercase fw-bold"><i
+                                                                class="bi bi-trash me-1"></i> Removed from System</h6>
+                                                        <div class="fs-6 fw-bold text-dark">
+                                                            {{ $item->deleted_at ? $item->deleted_at->format('d M Y, H:i') : 'Unknown' }}
+                                                            <br><small class="text-muted fw-normal">by {{ $item->deletedBy->name ?? 'Unknown' }}</small>
+                                                        </div>
+                                                    </div>
+                                                    @endif
                                                 </div>
                                             </div>
                                         </div>

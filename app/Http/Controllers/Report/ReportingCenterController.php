@@ -206,7 +206,9 @@ class ReportingCenterController extends Controller
 
             $data = $query->latest()->paginate(50)->withQueryString();
         } elseif ($reportType === 'Tools Transaction') {
-            $query = \App\Models\ToolItem::with(['tool.location', 'tool.rack', 'createdBy', 'loans', 'loans.borrower']);
+            $query = \App\Models\ToolItem::withTrashed()->with(['tool' => function ($q) {
+                $q->withTrashed()->with(['location', 'rack']);
+            }, 'deletedBy', 'createdBy', 'loans', 'loans.borrower']);
 
             if ($locationId) {
                 $query->whereHas('tool', function ($q) use ($locationId) {

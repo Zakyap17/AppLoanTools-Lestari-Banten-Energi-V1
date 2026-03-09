@@ -325,6 +325,13 @@ class ToolsController extends Controller
         }
 
         $tool = Tool::findOrFail($id);
+
+        $tool->deleted_by = auth()->id();
+        $tool->save();
+        
+        // Ensure all related tool items are marked with deleted_by before cascade deletes
+        $tool->items()->update(['deleted_by' => auth()->id()]);
+
         $tool->delete();
 
         return redirect()->back()->with('success', 'Tool deleted successfully.');
