@@ -511,7 +511,7 @@ class ToolsController extends Controller
         }
 
         $typeName = isset($data[3]) ? $data[3] : '';
-        // $groupCode = isset($data[4]) ? $data[4] : ''; // Unused for now
+        $groupName = isset($data[4]) ? $data[4] : '';
         $manfName = isset($data[5]) ? $data[5] : '';
         $uom = isset($data[6]) ? $data[6] : 'EA';
         $price = isset($data[7]) ? floatval($data[7]) : 0;
@@ -528,7 +528,61 @@ class ToolsController extends Controller
             if ($type) {
                 $typeId = $type->id;
             } else {
-                $warnings[] = "Row $rowLine: Material Type '$typeName' not found.";
+                $baseCode = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $typeName), 0, 3));
+                if (empty($baseCode)) $baseCode = 'TYP';
+                $typeCode = $baseCode . '-' . rand(100, 999);
+                while (ToolType::where('code', $typeCode)->exists()) {
+                    $typeCode = $baseCode . '-' . rand(100, 999);
+                }
+                $type = ToolType::create([
+                    'code' => $typeCode,
+                    'name' => $typeName,
+                    'description' => $typeName
+                ]);
+                $typeId = $type->id;
+            }
+        }
+
+        $subGroupId = null;
+        if ($groupName) {
+            $subGroup = \App\Models\ToolsMatSubGroup::whereRaw('LOWER(TRIM(sub_description)) = ?', [strtolower($groupName)])
+                ->orWhereRaw('LOWER(TRIM(sub_code)) = ?', [strtolower($groupName)])
+                ->first();
+                
+            if ($subGroup) {
+                $subGroupId = $subGroup->id;
+            } else {
+                $mainGroup = \App\Models\ToolsMatGroup::whereRaw('LOWER(TRIM(description)) = ?', [strtolower($groupName)])
+                    ->orWhereRaw('LOWER(TRIM(code)) = ?', [strtolower($groupName)])
+                    ->first();
+                    
+                if (!$mainGroup) {
+                    $baseCode = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $groupName), 0, 3));
+                    if (empty($baseCode)) $baseCode = 'MAT';
+                    $mainCode = $baseCode . '-' . rand(100, 999);
+                    while (\App\Models\ToolsMatGroup::where('code', $mainCode)->exists()) {
+                        $mainCode = $baseCode . '-' . rand(100, 999);
+                    }
+                    $mainGroup = \App\Models\ToolsMatGroup::create([
+                        'code' => $mainCode,
+                        'description' => $groupName
+                    ]);
+                }
+                
+                $subBaseCode = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $groupName), 0, 3));
+                if (empty($subBaseCode)) $subBaseCode = 'SUB';
+                $subCode = $subBaseCode . '-' . rand(1000, 9999);
+                while (\App\Models\ToolsMatSubGroup::where('sub_code', $subCode)->exists()) {
+                    $subCode = $subBaseCode . '-' . rand(1000, 9999);
+                }
+                
+                $subGroup = \App\Models\ToolsMatSubGroup::create([
+                    'sub_code' => $subCode,
+                    'mat_group_code' => $mainGroup->code,
+                    'sub_description' => $groupName
+                ]);
+                
+                $subGroupId = $subGroup->id;
             }
         }
 
@@ -614,6 +668,7 @@ class ToolsController extends Controller
                 'po_number' => isset($data[11]) ? $data[11] : null, // Add mapping for Column 11
                 'name' => $desc,
                 'type_id' => $typeId,
+                'sub_group_id' => $subGroupId,
                 'manufacturer_id' => $manfId,
                 'uom' => $uom,
                 'price' => $price,
