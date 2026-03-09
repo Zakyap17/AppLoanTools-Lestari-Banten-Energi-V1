@@ -192,7 +192,7 @@ class ToolsController extends Controller
         // because the previous iteration's insert might not be visible or committed yet? 
         // Actually inside transaction it might be visible. Let's try direct query.
 
-        $lastTool = Tool::where('code', 'like', $prefix . '%')
+        $lastTool = Tool::withTrashed()->where('code', 'like', $prefix . '%')
             ->orderByRaw('LENGTH(code) desc')
             ->orderBy('code', 'desc')
             ->first();
@@ -208,7 +208,7 @@ class ToolsController extends Controller
 
     private function generateNextAssetNo()
     {
-        $lastAsset = Tool::where('serial_number', 'like', 'TAS%')
+        $lastAsset = Tool::withTrashed()->where('serial_number', 'like', 'TAS%')
             ->orderByRaw('LENGTH(serial_number) desc')
             ->orderBy('serial_number', 'desc')
             ->first();
