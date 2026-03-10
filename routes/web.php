@@ -176,6 +176,10 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/receive', [ReceiveController::class, 'index'])
         ->name('receive');
 
+    Route::get('/calibration-issuing/template', [CalibrationIssuingController::class, 'template'])
+        ->name('calibration-issuing.template');
+    Route::post('/calibration-issuing/import', [CalibrationIssuingController::class, 'import'])
+        ->name('calibration-issuing.import');
     Route::get('/calibration-issuing', [CalibrationIssuingController::class, 'index'])
         ->name('calibration-issuing');
     Route::get('/calibration-issuing/create', [CalibrationIssuingController::class, 'create'])

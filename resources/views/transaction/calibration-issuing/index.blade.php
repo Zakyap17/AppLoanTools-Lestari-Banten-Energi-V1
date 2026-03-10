@@ -91,12 +91,49 @@
                     style="left: 15px; top: 50%; transform: translateY(-50%);"></i>
                 <input type="text" class="search-input-modern ps-5" placeholder="Search document..." id="searchInput">
             </div>
+            {{-- NEW BUTTON --}}
             <a href="{{ route('calibration-issuing.create') }}"
                 class="btn btn-light fw-bold px-4 py-2 rounded-pill shadow-sm" title="Create New Calibration">
                 <i class="bi bi-plus-lg me-1"></i> New Calibration
             </a>
+
+            {{-- MORE ACTIONS --}}
+            <div class="dropdown">
+                <button class="btn btn-light rounded-circle shadow-sm p-0 d-flex align-items-center justify-content-center" data-bs-toggle="dropdown" style="width: 42px; height: 42px;">
+                    <i class="bi bi-three-dots-vertical"></i>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end border-0 shadow-lg p-2 rounded-3">
+                    <li><a class="dropdown-item rounded-2 py-2 small" href="{{ route('calibration-issuing.template') }}"><i class="bi bi-file-earmark-spreadsheet me-2 text-success"></i> Template</a></li>
+                    <li><a class="dropdown-item rounded-2 py-2 small" href="#" data-bs-toggle="modal" data-bs-target="#importModal"><i class="bi bi-upload me-2 text-primary"></i> Upload</a></li>
+                </ul>
+            </div>
         </div>
     </div>
+
+    {{-- ALERTS --}}
+    @if(session('success'))
+        <div class="alert alert-success alert-dismissible fade show border-0 shadow-sm mb-4" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i>
+            {!! session('success') !!}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    @endif
+
+    @if(session('warning'))
+        <div class="alert alert-warning alert-dismissible fade show border-0 shadow-sm mb-4" role="alert">
+            <i class="bi bi-exclamation-circle-fill me-2"></i>
+            {!! session('warning') !!}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    @endif
+
+    @if(session('error'))
+        <div class="alert alert-danger alert-dismissible fade show border-0 shadow-sm mb-4" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+            {!! session('error') !!}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    @endif
 
     <div class="modern-table-container">
         <div class="table-responsive">
@@ -227,5 +264,142 @@
             myModal.show();
         }
     </script>
+
+    {{-- IMPORT MODAL --}}
+    <div class="modal fade" id="importModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-light border-0 py-3">
+                    <h6 class="modal-title fw-bold">Import Calibration Issuing</h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <form action="{{ route('calibration-issuing.import') }}" method="POST" enctype="multipart/form-data">
+                        @csrf
+                        <div class="mb-4">
+                            <div class="upload-zone p-5 text-center border border-2 border-dashed rounded-4 position-relative"
+                                id="uploadZoneCalib"
+                                style="border-color: #cbd5e1; background-color: #f8fafc; transition: all 0.2s;"
+                                ondragover="this.style.borderColor='#3b82f6'; this.style.backgroundColor='#eff6ff'; event.preventDefault();"
+                                ondragleave="this.style.borderColor='#cbd5e1'; this.style.backgroundColor='#f8fafc';"
+                                ondrop="handleDropCalib(event)">
+
+                                <input type="file" name="file" id="fileInputCalib"
+                                    class="position-absolute top-0 start-0 w-100 h-100 opacity-0" accept=".csv, .txt, .xlsx, .xls"
+                                    required style="cursor: pointer;"
+                                    onchange="handleFileSelectCalib(this)">
+
+                                <!-- Default Placeholder -->
+                                <div id="placeholderCalib" style="pointer-events: none;">
+                                    <div class="mb-3">
+                                        <div class="bg-primary bg-opacity-10 d-inline-flex p-3 rounded-circle text-primary">
+                                            <i class="bi bi-cloud-arrow-up fs-2"></i>
+                                        </div>
+                                    </div>
+                                    <h6 class="fw-bold text-dark mb-1">Click to upload or drag and drop</h6>
+                                    <p class="text-muted small mb-0">CSV or Excel file (max 2MB)</p>
+                                </div>
+
+                                <!-- Success State -->
+                                <div id="successCalib" class="d-none position-relative" style="z-index: 10;">
+                                    <div class="mb-3">
+                                        <div class="bg-success bg-opacity-10 d-inline-flex p-3 rounded-circle text-success">
+                                            <i class="bi bi-file-earmark-spreadsheet fs-2"></i>
+                                        </div>
+                                    </div>
+                                    <h6 class="fw-bold text-dark mb-1" id="fileNameCalib">filename.csv</h6>
+                                    <p class="text-success small mb-3 fw-bold">
+                                        <i class="bi bi-check-circle-fill me-1"></i> Ready to import
+                                    </p>
+                                    <button type="button" class="btn btn-sm btn-outline-danger rounded-pill px-3" onclick="removeFileCalib()">
+                                        <i class="bi bi-x-circle me-1"></i> Remove File
+                                    </button>
+                                </div>
+
+                                <!-- Error State -->
+                                <div id="errorCalib" class="d-none position-relative" style="z-index: 10;">
+                                    <div class="mb-3">
+                                        <div class="bg-danger bg-opacity-10 d-inline-flex p-3 rounded-circle text-danger">
+                                            <i class="bi bi-exclamation-triangle fs-2"></i>
+                                        </div>
+                                    </div>
+                                    <h6 class="fw-bold text-danger mb-1" id="errorMsgCalib">Error</h6>
+                                    <p class="text-muted small mb-3">Please try again</p>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3" onclick="removeFileCalib()">
+                                        <i class="bi bi-arrow-clockwise me-1"></i> Try Again
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="form-text small text-center mt-2">
+                                <i class="bi bi-info-circle me-1"></i> Supported: CSV, TXT, XLSX, XLS.
+                            </div>
+                        </div>
+
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary btn-lg rounded-pill fw-bold shadow-sm">
+                                <i class="bi bi-file-earmark-arrow-up me-2"></i> Import Data
+                            </button>
+                        </div>
+                    </form>
+
+                    <script>
+                        function handleFileSelectCalib(input) {
+                            if (input.files.length > 0) {
+                                validateAndDisplayCalib(input.files[0]);
+                            }
+                        }
+
+                        function handleDropCalib(event) {
+                            event.preventDefault();
+                            const zone = document.getElementById('uploadZoneCalib');
+                            zone.style.borderColor = '#cbd5e1';
+                            zone.style.backgroundColor = '#f8fafc';
+                            
+                            const input = document.getElementById('fileInputCalib');
+                            if (event.dataTransfer.files.length > 0) {
+                                input.files = event.dataTransfer.files;
+                                validateAndDisplayCalib(event.dataTransfer.files[0]);
+                            }
+                        }
+
+                        function validateAndDisplayCalib(file) {
+                            const maxSize = 2 * 1024 * 1024; // 2MB
+                            const placeholder = document.getElementById('placeholderCalib');
+                            const success = document.getElementById('successCalib');
+                            const error = document.getElementById('errorCalib');
+                            const errorMsg = document.getElementById('errorMsgCalib');
+                            const fileName = document.getElementById('fileNameCalib');
+                            const input = document.getElementById('fileInputCalib');
+
+                            placeholder.classList.add('d-none');
+
+                            if (file.size > maxSize) {
+                                success.classList.add('d-none');
+                                error.classList.remove('d-none');
+                                errorMsg.textContent = 'File too large (> 2MB)!';
+                                input.value = '';
+                            } else {
+                                error.classList.add('d-none');
+                                success.classList.remove('d-none');
+                                fileName.textContent = file.name;
+                            }
+                        }
+
+                        function removeFileCalib() {
+                            const input = document.getElementById('fileInputCalib');
+                            const placeholder = document.getElementById('placeholderCalib');
+                            const success = document.getElementById('successCalib');
+                            const error = document.getElementById('errorCalib');
+
+                            input.value = '';
+                            success.classList.add('d-none');
+                            error.classList.add('d-none');
+                            placeholder.classList.remove('d-none');
+                        }
+                    </script>
+                </div>
+            </div>
+        </div>
+    </div>
 
 @endsection
