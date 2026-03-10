@@ -16,7 +16,6 @@
             border-radius: 20px; /* Rounded corners */
             margin-bottom: 2rem;
             position: relative;
-            overflow: hidden;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
             /* Removed negative margins */
         }
@@ -30,6 +29,7 @@
             left: 0;
             background: url('data:image/svg+xml,<svg width="20" height="20" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><g fill="%23ffffff" fill-opacity="0.05"><path d="M0 0h20L0 20z"/></g></svg>');
             opacity: 0.3;
+            border-radius: inherit;
         }
 
         .search-input-modern {
