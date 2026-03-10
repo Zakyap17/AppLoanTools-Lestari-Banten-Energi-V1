@@ -35,6 +35,9 @@ class LoginController extends Controller
                             'name' => $ldapUser['name'],
                             'guid' => $ldapUser['guid'],
                             'is_active' => true,
+                            // Provide a secure random password to satisfy the DB constraint
+                            // The user will still authenticate via LDAP, not this password.
+                            'password' => \Illuminate\Support\Facades\Hash::make(\Illuminate\Support\Str::random(32)),
                         ]
                     );
 
