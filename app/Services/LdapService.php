@@ -64,11 +64,13 @@ class LdapService
 
         if (@\ldap_bind($conn, $adminUser, $adminPass)) {
             $filter = "(samaccountname=$username)";
-            $search = \ldap_search($conn, $this->baseDn, $filter, ['dn']);
-            $entries = \ldap_get_entries($conn, $search);
+            $search = @\ldap_search($conn, $this->baseDn, $filter, ['dn']);
 
-            if ($entries['count'] > 0) {
-                return $entries[0]['dn'];
+            if ($search) {
+                $entries = @\ldap_get_entries($conn, $search);
+                if ($entries !== false && $entries['count'] > 0) {
+                    return $entries[0]['dn'];
+                }
             }
         }
 
@@ -87,17 +89,21 @@ class LdapService
         if (@\ldap_bind($conn, $adminUser, $adminPass)) {
             $filter = "(objectClass=user)";
             $attributes = ['samaccountname', 'cn', 'name', 'mail', 'objectguid', 'dn'];
-            $search = \ldap_search($conn, $this->baseDn, $filter, $attributes);
-            $entries = \ldap_get_entries($conn, $search);
+            $search = @\ldap_search($conn, $this->baseDn, $filter, $attributes);
 
             $users = [];
-            for ($i = 0; $i < $entries['count']; $i++) {
-                $users[] = [
-                    'username' => $entries[$i]['samaccountname'][0] ?? null,
-                    'name' => $entries[$i]['cn'][0] ?? $entries[$i]['name'][0] ?? null,
-                    'email' => $entries[$i]['mail'][0] ?? null,
-                    'guid' => bin2hex($entries[$i]['objectguid'][0]) ?? null,
-                ];
+            if ($search) {
+                $entries = @\ldap_get_entries($conn, $search);
+                if ($entries !== false) {
+                    for ($i = 0; $i < $entries['count']; $i++) {
+                        $users[] = [
+                            'username' => $entries[$i]['samaccountname'][0] ?? null,
+                            'name' => $entries[$i]['cn'][0] ?? $entries[$i]['name'][0] ?? null,
+                            'email' => $entries[$i]['mail'][0] ?? null,
+                            'guid' => bin2hex($entries[$i]['objectguid'][0]) ?? null,
+                        ];
+                    }
+                }
             }
             return $users;
         }
@@ -117,16 +123,18 @@ class LdapService
         if (@\ldap_bind($conn, $adminUser, $adminPass)) {
             $filter = "(&(objectClass=user)(samaccountname=$username))";
             $attributes = ['samaccountname', 'cn', 'name', 'mail', 'objectguid', 'dn'];
-            $search = \ldap_search($conn, $this->baseDn, $filter, $attributes);
-            $entries = \ldap_get_entries($conn, $search);
+            $search = @\ldap_search($conn, $this->baseDn, $filter, $attributes);
 
-            if ($entries['count'] > 0) {
-                return [
-                    'username' => $entries[0]['samaccountname'][0] ?? null,
-                    'name' => $entries[0]['cn'][0] ?? $entries[0]['name'][0] ?? null,
-                    'email' => $entries[0]['mail'][0] ?? null,
-                    'guid' => bin2hex($entries[0]['objectguid'][0]) ?? null,
-                ];
+            if ($search) {
+                $entries = @\ldap_get_entries($conn, $search);
+                if ($entries !== false && $entries['count'] > 0) {
+                    return [
+                        'username' => $entries[0]['samaccountname'][0] ?? null,
+                        'name' => $entries[0]['cn'][0] ?? $entries[0]['name'][0] ?? null,
+                        'email' => $entries[0]['mail'][0] ?? null,
+                        'guid' => bin2hex($entries[0]['objectguid'][0]) ?? null,
+                    ];
+                }
             }
         }
 
