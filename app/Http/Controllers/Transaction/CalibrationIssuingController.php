@@ -77,23 +77,89 @@ class CalibrationIssuingController extends Controller
 
     public function template()
     {
-        $headers = [
-            "Content-type" => "text/csv",
-            "Content-Disposition" => "attachment; filename=Calibration_Issuing_Template.csv",
-            "Pragma" => "no-cache",
-            "Cache-Control" => "must-revalidate, post-check=0, pre-check=0",
-            "Expires" => "0"
-        ];
-        // Tool Code | Vendor Name | Issue Date | Expected Return Date | Cost | Notes
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Template Import');
+
+        // Define columns
         $columns = ['Tool Code', 'Vendor Name', 'Issue Date (YYYY-MM-DD)', 'Expected Return Date (YYYY-MM-DD)', 'Cost', 'Notes'];
-        $callback = function () use ($columns) {
-            $file = fopen('php://output', 'w');
-            fputcsv($file, $columns, ';');
-            // Sample data
-            fputcsv($file, ['2600001', 'PT. Vendor Kalibrasi A', date('Y-m-d'), date('Y-m-d', strtotime('+15 days')), '500000', 'Annual Calibration'], ';');
-            fclose($file);
-        };
-        return response()->stream($callback, 200, $headers);
+        
+        // Set Headers and adjust width manually before auto-sizing to prevent collapse
+        $colIndex = 'A';
+        foreach ($columns as $column) {
+            $sheet->setCellValue($colIndex . '1', $column);
+            $sheet->getColumnDimension($colIndex)->setAutoSize(true);
+            $colIndex++;
+        }
+
+        // Style the Header Row
+        $headerStyle = [
+            'font' => [
+                'bold' => true,
+                'color' => ['argb' => 'FFFFFFFF'], // White text
+            ],
+            'fill' => [
+                'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
+                'startColor' => ['argb' => 'FF0D6EFD'], // Bootstrap Primary Blue
+            ],
+            'alignment' => [
+                'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
+                'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
+            ],
+            'borders' => [
+                'allBorders' => [
+                    'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
+                    'color' => ['argb' => 'FF000000'],
+                ],
+            ],
+        ];
+        $sheet->getStyle('A1:F1')->applyFromArray($headerStyle);
+        $sheet->getRowDimension(1)->setRowHeight(25);
+
+        // Add Sample Data
+        $sampleData = [
+            ['2600001', 'PT. Vendor Kalibrasi A', date('Y-m-d'), date('Y-m-d', strtotime('+15 days')), '500000', 'Annual Calibration'],
+            ['2600002', 'CV. Global Teknik', date('Y-m-d'), date('Y-m-d', strtotime('+30 days')), '350000', 'Routine Check'],
+        ];
+
+        $row = 2;
+        foreach ($sampleData as $data) {
+            $colIndex = 'A';
+            foreach ($data as $value) {
+                // Ensure text format for numbers to prevent scientific notation and date shifts
+                $sheet->setCellValueExplicit($colIndex . $row, $value, \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+                $colIndex++;
+            }
+            $row++;
+        }
+        
+        // Data alignment & subtle borders
+        $dataStyle = [
+            'alignment' => [
+                'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_LEFT,
+                'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
+            ],
+            'borders' => [
+                'allBorders' => [
+                    'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
+                    'color' => ['argb' => 'FFCCCCCC'],
+                ],
+            ],
+        ];
+        $sheet->getStyle('A2:F3')->applyFromArray($dataStyle);
+
+        // Lock the header row so it stays visible when scrolling down
+        $sheet->freezePane('A2');
+
+        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+        $fileName = 'Calibration_Issuing_Template.xlsx';
+
+        return response()->streamDownload(function () use ($writer) {
+            $writer->save('php://output');
+        }, $fileName, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Content-Disposition' => 'attachment; filename="' . $fileName . '"',
+        ]);
     }
 
     public function import(Request $request)
