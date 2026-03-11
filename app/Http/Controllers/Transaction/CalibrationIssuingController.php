@@ -82,7 +82,7 @@ class CalibrationIssuingController extends Controller
         $sheet->setTitle('Template Import');
 
         // Define columns
-        $columns = ['Tool Code', 'Vendor Name', 'Issue Date (YYYY-MM-DD)', 'Expected Return Date (YYYY-MM-DD)', 'Cost', 'Notes'];
+        $columns = ['Tool Code', 'Vendor Name', 'Issue Date (YYYY-MM-DD)', 'Next Calibration Date (YYYY-MM-DD)', 'Cost', 'Notes'];
         
         // Set Headers and adjust width manually before auto-sizing to prevent collapse
         $colIndex = 'A';
