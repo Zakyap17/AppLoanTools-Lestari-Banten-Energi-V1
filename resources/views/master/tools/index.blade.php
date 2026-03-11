@@ -275,18 +275,19 @@
                                             $calStatus = 'Need Calibration';
                                         }
                                     }
-                                @endphp
 
-                                @if($calStatus)
-                                    <span class="badge bg-danger blink-badge">Need Calibration</span>
-                                @else
-                                    @php
+                                    $dispStatus = 'Unavailable';
+                                    $dispBadge = 'bg-secondary';
+
+                                    if (request('status') == 'archived') {
+                                        $dispStatus = 'Deleted';
+                                        $dispBadge = 'bg-danger';
+                                        // Ignore calibration if deleted
+                                        $calStatus = null;
+                                    } else {
                                         $items = $tool->items;
                                         $total = $items->count();
                                         $hasAvailable = $items->contains('status', 'available');
-                                        
-                                        $dispStatus = 'Unavailable';
-                                        $dispBadge = 'bg-secondary';
 
                                         if ($hasAvailable) {
                                             $dispStatus = 'Available';
@@ -317,7 +318,12 @@
                                             $dispBadge = ($tool->status === 'available') ? 'bg-success' : 'bg-warning';
                                             if ($total == 0) $dispBadge = 'bg-secondary';
                                         }
-                                    @endphp
+                                    }
+                                @endphp
+
+                                @if($calStatus)
+                                    <span class="badge bg-danger blink-badge">Need Calibration</span>
+                                @else
                                     <span class="badge {{ $dispBadge }}">
                                         {{ $dispStatus }}
                                     </span>
