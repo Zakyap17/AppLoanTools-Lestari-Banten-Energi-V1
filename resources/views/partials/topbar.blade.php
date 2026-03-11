@@ -61,7 +61,7 @@
         {{-- Logo (Visible only when Sidebar is Collapsed) --}}
         <div id="topbar-logo-container" class="d-flex align-items-center gap-2">
             <img src="{{ asset('assets/images/logo-new.png') }}" alt="Logo" class="img-fluid rounded-3"
-                style="width: 32px; height: 32px;">
+                style="width: 45px; height: 45px;">
             <h5 class="mb-0 fw-bold d-none d-sm-block"
                 style="font-family: 'Inter', sans-serif; letter-spacing: -0.5px; color: #1e293b;">
                 Management Tools.
