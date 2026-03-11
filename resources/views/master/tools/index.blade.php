@@ -110,12 +110,20 @@
     <div class="page-header-modern d-flex justify-content-between align-items-center">
         <div class="position-relative z-1">
             <h6 class="text-white-50 mb-1 text-uppercase letter-spacing-1" style="font-size: 0.75rem;">Master Data</h6>
-            <h3 class="fw-bold mb-0">Tools Management</h3>
+            <h3 class="fw-bold mb-0">
+                Tools Management
+                @if(request('status') == 'archived')
+                    <span class="badge bg-danger fs-6 ms-2 align-middle">ARCHIVE</span>
+                @endif
+            </h3>
             <p class="text-white-50 mb-0 small mt-1">Manage tools, assets, and serialized items</p>
         </div>
         <div class="position-relative z-1 d-flex gap-3 align-items-center">
             {{-- SEARCH --}}
             <form action="{{ route('tools.index') }}" method="GET" class="position-relative mb-0">
+                @if(request('status'))
+                    <input type="hidden" name="status" value="{{ request('status') }}">
+                @endif
                 <i class="bi bi-search position-absolute text-muted" style="left: 15px; top: 50%; transform: translateY(-50%);"></i>
                 <input type="text" name="search" value="{{ request('search') }}" class="search-input-modern ps-5" placeholder="Code or Name..." autocomplete="off">
             </form>
@@ -131,6 +139,12 @@
                     <i class="bi bi-three-dots-vertical"></i>
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end border-0 shadow-lg p-2 rounded-3">
+                    @if(request('status') == 'archived')
+                        <li><a class="dropdown-item rounded-2 py-2 small" href="{{ route('tools.index') }}"><i class="bi bi-grid text-primary me-2"></i> View Active Data</a></li>
+                    @else
+                        <li><a class="dropdown-item rounded-2 py-2 small" href="{{ route('tools.index', ['status' => 'archived']) }}"><i class="bi bi-archive text-danger me-2"></i> View Archive</a></li>
+                    @endif
+                    <li><hr class="dropdown-divider"></li>
                     <li><a class="dropdown-item rounded-2 py-2 small" href="{{ route('tools.template') }}"><i class="bi bi-file-earmark-spreadsheet me-2 text-success"></i> Template</a></li>
                     <li><a class="dropdown-item rounded-2 py-2 small" href="#" data-bs-toggle="modal" data-bs-target="#importModal"><i class="bi bi-upload me-2 text-primary"></i> Upload</a></li>
                 </ul>
@@ -218,7 +232,9 @@
                         <th>Manufacturer</th>
                         <th>Price</th>
                         <th class="text-center">Status</th>
-                        <th class="small text-center">Actions</th>
+                        @if(request('status') != 'archived')
+                            <th class="small text-center">Actions</th>
+                        @endif
                     </tr>
                 </thead>
                 <tbody>

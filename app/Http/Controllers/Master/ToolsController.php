@@ -20,7 +20,11 @@ class ToolsController extends Controller
     {
         $query = Tool::with(['type', 'manufacturer', 'location', 'rack', 'subGroup.matGroup', 'items']);
 
-        if ($request->has('search')) {
+        if ($request->has('status') && $request->status == 'archived') {
+            $query->onlyTrashed();
+        }
+
+        if ($request->has('search') && $request->search) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('code', 'ilike', "%{$search}%")
@@ -29,7 +33,7 @@ class ToolsController extends Controller
             });
         }
 
-        $tools = $query->latest()->paginate(10)->withQueryString();
+        $tools = $query->latest('id')->paginate(10)->withQueryString();
 
         // KPI Calculations
         $totalMasterData = Tool::count();
