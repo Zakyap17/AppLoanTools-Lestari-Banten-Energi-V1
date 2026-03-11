@@ -466,7 +466,9 @@
                                     
                                     if (!$firstLoan) continue; // Safety check
                                     
-                                    $totalQty = $loanGroup->sum('loan_quantity');
+                                    $totalQty = $loanGroup->sum(function($item) {
+                                        return max(1, $item->loan_quantity);
+                                    });
                                 @endphp
                                 
                                 <tr data-bs-toggle="collapse" data-bs-target="#collapseLoan{{ $index }}"
@@ -516,7 +518,7 @@
                                                                 <td class="small">{{ $item->tool?->name ?? '-' }}</td>
                                                                 <td class="small">{{ $item->item?->serial_number ?? '-' }}</td>
                                                                 <td class="small text-center">{{ $item->tool?->uom ?? '-' }}</td>
-                                                                <td class="small text-center fw-bold">{{ $item->loan_quantity }}</td>
+                                                                <td class="small text-center fw-bold">{{ max(1, $item->loan_quantity) }}</td>
                                                             </tr>
                                                         @endforeach
                                                     </tbody>

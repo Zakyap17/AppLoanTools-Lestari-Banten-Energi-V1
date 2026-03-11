@@ -469,7 +469,7 @@ class ReportingCenterController extends Controller
                     $loan->tool->name ?? '-',
                     $loan->tool->serial_number ?? '-',
                     $loan->tool->uom ?? '-',
-                    $loan->loan_quantity,
+                    max(1, $loan->loan_quantity),
                     $loan->borrower->name ?? '-'
                 ];
             }
