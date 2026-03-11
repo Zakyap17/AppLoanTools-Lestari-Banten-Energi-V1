@@ -400,6 +400,12 @@
                                                                     $displayStatus = 'Not Available';
                                                                     $badgeClass = 'bg-danger';
                                                                 }
+
+                                                                // Archive Override
+                                                                if(request('status') == 'archived') {
+                                                                    $displayStatus = 'Deleted';
+                                                                    $badgeClass = 'bg-danger-subtle text-danger border border-danger-subtle';
+                                                                }
                                                             @endphp
                                                             <tr>
                                                                 <td class="fw-bold ps-3">{{ $item->serial_number }}</td>
