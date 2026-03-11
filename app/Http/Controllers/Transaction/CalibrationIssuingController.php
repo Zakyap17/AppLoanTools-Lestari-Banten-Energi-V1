@@ -303,8 +303,18 @@ class CalibrationIssuingController extends Controller
         // 2. Lookup or Create Vendor
         $vendor = \App\Models\VendorCalibration::whereRaw('LOWER(TRIM(name)) = ?', [strtolower($vendorName)])->first();
         if (!$vendor) {
+            $lastVendor = \App\Models\VendorCalibration::latest('id')->first();
+            $nextNumber = $lastVendor ? ((int) substr($lastVendor->code, 2)) + 1 : 12;
+            $nextCode = 'VC' . str_pad($nextNumber, 5, '0', STR_PAD_LEFT);
+
+            while (\App\Models\VendorCalibration::where('code', $nextCode)->exists()) {
+                $nextNumber++;
+                $nextCode = 'VC' . str_pad($nextNumber, 5, '0', STR_PAD_LEFT);
+            }
+
             $vendor = \App\Models\VendorCalibration::create([
-                'name' => $vendorName, // Assuming default fields are fine
+                'code' => $nextCode,
+                'name' => $vendorName, // Assuming other default nullable fields are fine
             ]);
         }
 
