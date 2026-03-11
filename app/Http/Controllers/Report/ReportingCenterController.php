@@ -20,6 +20,7 @@ class ReportingCenterController extends Controller
         $rackId = $request->query('rack');
         $toolId = $request->query('tool_id'); // Select2 Tool ID
         $search = $request->query('search'); // Global Search (Text)
+        $documentNo = $request->query('document_no'); // Specific Document No Search
         $employeeId = $request->query('employee');
         $dateFrom = $request->query('date_from');
         $dateTo = $request->query('date_to');
@@ -78,6 +79,10 @@ class ReportingCenterController extends Controller
                 ->leftJoin('tool_items', 'loans.tool_item_id', '=', 'tool_items.id')
                 ->groupBy('loans.loan_code');
 
+            if ($documentNo) {
+                $baseQuery->where('loans.loan_code', 'ilike', "%" . trim($documentNo) . "%");
+            }
+
             if ($locationId) {
                 $baseQuery->where('tools.location_id', $locationId);
             }
@@ -124,6 +129,10 @@ class ReportingCenterController extends Controller
 
         } elseif ($reportType === 'Return / Damage') {
             $query = \App\Models\DamageLost::with(['tool' => function($q){ $q->withTrashed()->with(['location', 'rack']); }, 'employee']);
+
+            if ($documentNo) {
+                $query->where('report_code', 'ilike', "%" . trim($documentNo) . "%");
+            }
 
             if ($locationId) {
                 $query->whereHas('tool', function ($q) use ($locationId) {
@@ -175,6 +184,10 @@ class ReportingCenterController extends Controller
             $data = $query->latest()->paginate(50)->withQueryString();
         } elseif ($reportType === 'Calibration') {
             $query = \App\Models\CalibrationIssuing::with(['tool' => function($q) { $q->withTrashed()->with(['location', 'rack']); }, 'vendor']);
+
+            if ($documentNo) {
+                $query->where('issue_code', 'ilike', "%" . trim($documentNo) . "%");
+            }
 
             if ($locationId) {
                 $query->whereHas('tool', function ($q) use ($locationId) {
@@ -324,6 +337,7 @@ class ReportingCenterController extends Controller
         $rackId = $request->query('rack');
         $toolId = $request->query('tool_id');
         $search = $request->query('search'); // Global Search
+        $documentNo = $request->query('document_no'); // Specific Document No Search
         $employeeId = $request->query('employee');
         $dateFrom = $request->query('date_from');
         $dateTo = $request->query('date_to');
@@ -393,6 +407,10 @@ class ReportingCenterController extends Controller
         } elseif ($reportType === 'Loan') {
             $query = \App\Models\Loan::with(['tool.location', 'tool.rack', 'borrower']);
 
+            if ($documentNo) {
+                $query->where('loan_code', 'ilike', "%" . trim($documentNo) . "%");
+            }
+
             if ($locationId) {
                 $query->whereHas('tool', function ($q) use ($locationId) {
                     $q->where('location_id', $locationId);
@@ -459,6 +477,10 @@ class ReportingCenterController extends Controller
 
         } elseif ($reportType === 'Return / Damage') {
             $query = \App\Models\DamageLost::with(['tool.location', 'tool.rack', 'employee']);
+
+            if ($documentNo) {
+                $query->where('report_code', 'ilike', "%" . trim($documentNo) . "%");
+            }
 
             if ($locationId) {
                 $query->whereHas('tool', function ($q) use ($locationId) {

@@ -340,6 +340,12 @@
                         <option value="Damaged" {{ request('status') == 'Damaged' ? 'selected' : '' }}>Damaged</option>
                     </select>
                 </div>
+
+                {{-- DOCUMENT NO --}}
+                <div class="col-md-12 filter-group" id="documentNoFilterGroup" style="display: none;">
+                    <label class="form-label">Document No</label>
+                    <input type="text" name="document_no" class="form-control" value="{{ request('document_no') }}" placeholder="Enter Document No (Available for Loan, Return/Damage, and Calibration)">
+                </div>
             </div>
 
             {{-- ACTION BUTTONS --}}
@@ -994,6 +1000,26 @@
 
                 });
             }
+
+            // Document No visibility
+            function toggleDocumentNo() {
+                const reportType = $('#reportTypeSelect').val();
+                const allowedTypes = ['Loan', 'Return / Damage', 'Calibration'];
+                
+                if (allowedTypes.includes(reportType)) {
+                    $('#documentNoFilterGroup').slideDown();
+                } else {
+                    $('#documentNoFilterGroup').slideUp();
+                    $('input[name="document_no"]').val(''); // Clear it if hidden
+                }
+            }
+
+            $('#reportTypeSelect').on('change', function() {
+                toggleDocumentNo();
+            });
+
+            // Initial state
+            toggleDocumentNo();
 
             initToolSelect();
         });
