@@ -442,34 +442,86 @@
                 <table class="table modern-table align-middle">
                     <thead>
                         <tr>
+                            <th style="width: 50px;"></th>
                             <th>No.</th>
-                            <th>Storage</th>
-                            <th>Bin</th>
-                            <th>Tool No.</th>
-                            <th>Description</th>
-                            <th>Asset No (Serial)</th>
-                            <th>UOM</th>
-                            <th>Qty</th>
-                            <th>Employee Name</th>
+                            <th>Document No.</th>
+                            <th>Date</th>
+                            <th>Borrower Name</th>
+                            <th class="text-center">Total Tools</th>
+                            <th class="text-center">Action</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody class="accordion" id="loanAccordion">
                         @if(request('report_type') == 'Loan')
-                            @forelse($data as $index => $loan)
-                                <tr>
+                            @forelse($data as $index => $loanCodeRec)
+                                @php
+                                    $loanGroup = $allLoans[$loanCodeRec->loan_code] ?? collect();
+                                    $firstLoan = $loanGroup->first();
+                                    
+                                    if (!$firstLoan) continue; // Safety check
+                                    
+                                    $totalQty = $loanGroup->sum('loan_quantity');
+                                @endphp
+                                
+                                <tr data-bs-toggle="collapse" data-bs-target="#collapseLoan{{ $index }}"
+                                    aria-expanded="false" aria-controls="collapseLoan{{ $index }}"
+                                    style="cursor: pointer;">
+                                    <td class="text-center">
+                                        <i class="bi bi-chevron-down text-primary" style="transition: transform 0.3s;"></i>
+                                    </td>
                                     <td>{{ $index + 1 }}</td>
-                                    <td>{{ $loan->tool->location->name ?? '-' }}</td>
-                                    <td>{{ $loan->tool->rack->code ?? '-' }}</td>
-                                    <td class="fw-bold text-primary">{{ $loan->tool->code ?? '-' }}</td>
-                                    <td>{{ $loan->tool->name ?? '-' }}</td>
-                                    <td>{{ $loan->tool->serial_number ?? '-' }}</td>
-                                    <td class="text-center">{{ $loan->tool->uom ?? '-' }}</td>
-                                    <td class="text-center">{{ $loan->loan_quantity }}</td>
-                                    <td>{{ $loan->borrower->name ?? '-' }}</td>
+                                    <td class="fw-bold text-primary">{{ $firstLoan->loan_code }}</td>
+                                    <td>{{ \Carbon\Carbon::parse($firstLoan->loan_date)->format('d M Y') }}</td>
+                                    <td>{{ $firstLoan->borrower->name ?? '-' }}</td>
+                                    <td class="text-center fw-bold">{{ $totalQty }} Items</td>
+                                    <td class="text-center">
+                                        <a href="{{ route('loan.print', $firstLoan->loan_code) }}" target="_blank"
+                                            class="btn btn-sm btn-outline-primary" title="View/Print Document">
+                                            <i class="bi bi-printer"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                
+                                <!-- EXPANDED DETAILS -->
+                                <tr>
+                                    <td colspan="7" class="p-0 border-0">
+                                        <div id="collapseLoan{{ $index }}" class="accordion-collapse collapse"
+                                            data-bs-parent="#loanAccordion">
+                                            <div class="p-4 bg-light">
+                                                <h6 class="mb-3 fw-bold text-muted small text-uppercase">Items in this Document:</h6>
+                                                <table class="table table-sm table-bordered bg-white mb-0">
+                                                    <thead class="table-light">
+                                                        <tr>
+                                                            <th class="small text-muted">Storage</th>
+                                                            <th class="small text-muted">Bin</th>
+                                                            <th class="small text-muted">Tool No.</th>
+                                                            <th class="small text-muted">Description</th>
+                                                            <th class="small text-muted">Asset No (Serial)</th>
+                                                            <th class="small text-muted text-center">UOM</th>
+                                                            <th class="small text-muted text-center">Qty</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        @foreach($loanGroup as $item)
+                                                            <tr>
+                                                                <td class="small">{{ $item->tool?->location?->name ?? '-' }}</td>
+                                                                <td class="small">{{ $item->tool?->rack?->code ?? '-' }}</td>
+                                                                <td class="small text-primary fw-bold">{{ $item->tool?->code ?? '-' }}</td>
+                                                                <td class="small">{{ $item->tool?->name ?? '-' }}</td>
+                                                                <td class="small">{{ $item->item?->serial_number ?? '-' }}</td>
+                                                                <td class="small text-center">{{ $item->tool?->uom ?? '-' }}</td>
+                                                                <td class="small text-center fw-bold">{{ $item->loan_quantity }}</td>
+                                                            </tr>
+                                                        @endforeach
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="9">
+                                    <td colspan="7">
                                         <div class="empty-state-table">
                                             <i class="bi bi-inbox"></i>
                                             <h5>No Loan History Found</h5>
@@ -480,7 +532,7 @@
                             @endforelse
                         @else
                             <tr>
-                                <td colspan="9">
+                                <td colspan="7">
                                     <div class="empty-state-table">
                                         <i class="bi bi-filter-circle"></i>
                                         <h5>Select Report Type</h5>

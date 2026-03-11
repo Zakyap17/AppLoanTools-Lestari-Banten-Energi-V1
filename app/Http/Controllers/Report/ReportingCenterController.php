@@ -68,27 +68,28 @@ class ReportingCenterController extends Controller
 
             $data = $query->latest('tool_items.created_at')->paginate(50)->withQueryString();
         } elseif ($reportType === 'Loan') {
-            // Optimization: Use Left Joins for Loan Report too
-            $query = \App\Models\Loan::select('loans.*')
+            // Group Loan queries by loan_code for expandable table view
+            $baseQuery = \App\Models\Loan::select('loans.loan_code')
+                ->selectRaw('MAX(loans.created_at) as max_created_at')
                 ->join('tools', 'loans.tool_id', '=', 'tools.id')
                 ->leftJoin('locations', 'tools.location_id', '=', 'locations.id')
                 ->leftJoin('racks', 'tools.rack_id', '=', 'racks.id')
                 ->leftJoin('employees as borrowers', 'loans.employee_id', '=', 'borrowers.id')
                 ->leftJoin('tool_items', 'loans.tool_item_id', '=', 'tool_items.id')
-                ->with(['tool' => function($q){ $q->withTrashed()->with(['location', 'rack']); }, 'borrower']);
+                ->groupBy('loans.loan_code');
 
             if ($locationId) {
-                $query->where('tools.location_id', $locationId);
+                $baseQuery->where('tools.location_id', $locationId);
             }
             if ($rackId) {
-                $query->where('tools.rack_id', $rackId);
+                $baseQuery->where('tools.rack_id', $rackId);
             }
             if ($toolId) {
-                $query->where('loans.tool_id', $toolId);
+                $baseQuery->where('loans.tool_id', $toolId);
             }
             if ($search) {
                 $exactSearch = trim($search);
-                $query->where(function ($q) use ($search, $exactSearch) {
+                $baseQuery->where(function ($q) use ($search, $exactSearch) {
                     $q->where('loans.loan_code', 'ilike', "{$exactSearch}")
                         ->orWhere('tools.code', 'ilike', "{$exactSearch}")
                         ->orWhere('tools.name', 'ilike', "%{$search}%")
@@ -100,16 +101,27 @@ class ReportingCenterController extends Controller
                 });
             }
             if ($employeeId) {
-                $query->where('loans.employee_id', $employeeId);
+                $baseQuery->where('loans.employee_id', $employeeId);
             }
             if ($dateFrom) {
-                $query->whereDate('loans.loan_date', '>=', $dateFrom);
+                $baseQuery->whereDate('loans.loan_date', '>=', $dateFrom);
             }
             if ($dateTo) {
-                $query->whereDate('loans.loan_date', '<=', $dateTo);
+                $baseQuery->whereDate('loans.loan_date', '<=', $dateTo);
             }
 
-            $data = $query->latest('loans.created_at')->paginate(50)->withQueryString();
+            // Paginate distinct loan codes
+            $codes = $baseQuery->orderBy('max_created_at', 'desc')->paginate(50)->withQueryString();
+
+            // Fetch all items belonging to these documents
+            $allLoans = \App\Models\Loan::with(['tool' => function($q){ $q->withTrashed()->with(['location', 'rack']); }, 'borrower', 'item'])
+                ->whereIn('loan_code', $codes->pluck('loan_code'))
+                ->get()
+                ->groupBy('loan_code');
+
+            $data = $codes; // We pass the paginator to the view, which gives us the codes
+            view()->share('allLoans', $allLoans); // Share the details map with the view
+
         } elseif ($reportType === 'Return / Damage') {
             $query = \App\Models\DamageLost::with(['tool' => function($q){ $q->withTrashed()->with(['location', 'rack']); }, 'employee']);
 
