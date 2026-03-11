@@ -82,7 +82,7 @@ class CalibrationIssuingController extends Controller
         $sheet->setTitle('Template Import');
 
         // Define columns
-        $columns = ['Tool Code', 'Vendor Name', 'Issue Date (YYYY-MM-DD)', 'Next Calibration Date (YYYY-MM-DD)', 'Cost', 'Notes'];
+        $columns = ['Tool Code', 'Item Name', 'Vendor Name', 'Issue Date (YYYY-MM-DD)', 'Next Calibration Date (YYYY-MM-DD)', 'Cost', 'Notes'];
         
         // Set Headers and adjust width manually before auto-sizing to prevent collapse
         $colIndex = 'A';
@@ -113,13 +113,13 @@ class CalibrationIssuingController extends Controller
                 ],
             ],
         ];
-        $sheet->getStyle('A1:F1')->applyFromArray($headerStyle);
+        $sheet->getStyle('A1:G1')->applyFromArray($headerStyle);
         $sheet->getRowDimension(1)->setRowHeight(25);
 
         // Add Sample Data
         $sampleData = [
-            ['2600001', 'PT. Vendor Kalibrasi A', date('Y-m-d'), date('Y-m-d', strtotime('+15 days')), '500000', 'Annual Calibration'],
-            ['2600002', 'CV. Global Teknik', date('Y-m-d'), date('Y-m-d', strtotime('+30 days')), '350000', 'Routine Check'],
+            ['2600001', 'Caliper Digital 150mm', 'PT. Vendor Kalibrasi A', date('Y-m-d'), date('Y-m-d', strtotime('+15 days')), '500000', 'Annual Calibration'],
+            ['2600002', 'Micrometer 0-25mm', 'CV. Global Teknik', date('Y-m-d'), date('Y-m-d', strtotime('+30 days')), '350000', 'Routine Check'],
         ];
 
         $row = 2;
@@ -146,7 +146,7 @@ class CalibrationIssuingController extends Controller
                 ],
             ],
         ];
-        $sheet->getStyle('A2:F3')->applyFromArray($dataStyle);
+        $sheet->getStyle('A2:G3')->applyFromArray($dataStyle);
 
         // Lock the header row so it stays visible when scrolling down
         $sheet->freezePane('A2');
@@ -273,15 +273,16 @@ class CalibrationIssuingController extends Controller
     private function importRow($data, $rowLine)
     {
         $warnings = [];
-        // Mapping: 0=Tool Code, 1=Vendor Name, 2=Issue Date, 3=Expected Return Date, 4=Cost, 5=Notes
+        // Mapping: 0=Tool Code, 1=Item Name (Ignored), 2=Vendor Name, 3=Issue Date, 4=Next Calibration Date, 5=Cost, 6=Notes
         $toolCode = isset($data[0]) ? $data[0] : '';
-        $vendorName = isset($data[1]) ? $data[1] : '';
+        // Item Name is in $data[1], but we just need Tool Code to match the database
+        $vendorName = isset($data[2]) ? $data[2] : '';
         
-        $issueDateRaw = isset($data[2]) ? $data[2] : '';
-        $expectedDateRaw = isset($data[3]) ? $data[3] : '';
+        $issueDateRaw = isset($data[3]) ? $data[3] : '';
+        $expectedDateRaw = isset($data[4]) ? $data[4] : '';
         
-        $costRaw = isset($data[4]) ? $data[4] : '';
-        $notes = isset($data[5]) ? $data[5] : '';
+        $costRaw = isset($data[5]) ? $data[5] : '';
+        $notes = isset($data[6]) ? $data[6] : '';
 
         if (empty($toolCode)) {
             throw new \Exception("Tool Code is required.");
