@@ -100,7 +100,7 @@ class CalibrationIssuingController extends Controller
             ],
             'fill' => [
                 'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
-                'startColor' => ['argb' => 'FF0D6EFD'], // Bootstrap Primary Blue
+                'startColor' => ['argb' => 'FF1E293B'], // Dark Slate (Tools Management Theme)
             ],
             'alignment' => [
                 'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
