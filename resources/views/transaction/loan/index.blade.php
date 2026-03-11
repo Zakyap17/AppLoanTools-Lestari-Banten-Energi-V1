@@ -262,13 +262,13 @@
                                                 <tr>
                                                     <td class="text-center">{{ $index + 1 }}</td>
                                                     <td class="fw-bold text-dark">
-                                                        {{ $item->item ? $item->item->serial_number : $item->tool->code }}
+                                                        {{ $item->item ? $item->item->serial_number : ($item->tool?->code ?? 'Unknown') }}
                                                     </td>
-                                                    <td>{{ $item->tool->name }}</td>
+                                                    <td>{{ $item->tool?->name ?? 'Unknown Tool' }}</td>
                                                     <td class="text-muted">
-                                                        {{ $item->tool->location->name ?? '-' }} <i
+                                                        {{ $item->tool?->location?->name ?? '-' }} <i
                                                             class="bi bi-chevron-right extra-small mx-1"></i>
-                                                        {{ $item->tool->rack->code ?? '-' }}
+                                                        {{ $item->tool?->rack?->code ?? '-' }}
                                                     </td>
                                                     <td class="text-center fw-bold">{{ $item->loan_quantity }}</td>
                                                     <td class="text-center text-muted small">

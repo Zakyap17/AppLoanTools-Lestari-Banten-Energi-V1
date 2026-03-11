@@ -38,7 +38,7 @@ class Loan extends Model
 
     public function tool()
     {
-        return $this->belongsTo(Tool::class);
+        return $this->belongsTo(Tool::class)->withTrashed();
     }
 
     public function borrower()
@@ -53,6 +53,6 @@ class Loan extends Model
 
     public function item()
     {
-        return $this->belongsTo(ToolItem::class, 'tool_item_id');
+        return $this->belongsTo(ToolItem::class, 'tool_item_id')->withTrashed();
     }
 }
