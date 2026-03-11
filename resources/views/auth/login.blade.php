@@ -77,9 +77,7 @@
         .brand-logo {
             width: 80px;
             height: 80px;
-            background: white;
-            border-radius: 10px;
-            padding: 8px;
+            background: transparent;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -134,10 +132,7 @@
             width: 90px;
             height: 90px;
             margin: 0 auto 20px;
-            background: white;
-            border-radius: 12px;
-            padding: 10px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            background: transparent;
         }
 
         .company-logo img {
