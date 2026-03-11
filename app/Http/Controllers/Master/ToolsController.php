@@ -400,6 +400,12 @@ class ToolsController extends Controller
                 $reader->setReadDataOnly(true);
 
                 if ($reader instanceof \PhpOffice\PhpSpreadsheet\Reader\Csv) {
+                    // Auto-detect ANSI vs UTF-8 encoding to fix symbols (e.g., degree °) becoming 
+                    $fileContent = file_get_contents($path);
+                    if ($fileContent !== false && !mb_check_encoding($fileContent, 'UTF-8')) {
+                        $reader->setInputEncoding('Windows-1252');
+                    }
+
                     // Read first line to detect delimiter
                     $handle = fopen($path, "r");
                     if ($handle) {
