@@ -132,11 +132,11 @@ class LdapService
                                     // Fallback username
                                     $username = $entry['samaccountname'][0] ?? $entry['cn'][0] ?? $entry['name'][0] ?? null;
 
-                                    // NIK detection
+                                    // NIK detection: employeeid -> extensionattribute1 -> description -> FALLBACK: Username
                                     $nik = $entry['employeeid'][0] 
                                             ?? $entry['extensionattribute1'][0] 
                                             ?? $entry['description'][0] 
-                                            ?? null;
+                                            ?? $username; // Use username as unique identifier if NIK is missing
 
                                     $users[] = [
                                         'username' => $username,

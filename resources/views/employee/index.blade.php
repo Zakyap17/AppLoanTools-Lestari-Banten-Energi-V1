@@ -496,7 +496,11 @@
                 cancelButtonColor: '#94a3b8',
                 confirmButtonText: 'Yes, sync now!',
                 showLoaderOnConfirm: true,
+                didOpen: () => {
+                    // Optional: customize loader
+                },
                 preConfirm: () => {
+                    Swal.showLoading();
                     document.getElementById('ldapSyncForm').submit();
                 }
             });
