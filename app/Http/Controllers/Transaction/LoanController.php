@@ -48,11 +48,21 @@ class LoanController extends Controller
         // Pass empty tools collection for AJAX
         $tools = collect();
 
-        // Generate Doc No: LOAN-YYYYMMDD-XXXX
-        $count = \App\Models\Loan::whereDate('created_at', today())->count() + 1;
-        $docNo = 'LOAN-' . date('Ymd') . '-' . str_pad($count, 4, '0', STR_PAD_LEFT);
+        // Auto-detect Keeper based on currently logged-in user
+        $user = auth()->user();
+        $detectedKeeperId = null;
 
-        return view('transaction.loan.create', compact('employees', 'docNo', 'tools'));
+        if ($user) {
+            $employee = \App\Models\Employee::where('nik', $user->username)
+                ->orWhere('name', 'ilike', $user->name)
+                ->first();
+            
+            if ($employee) {
+                $detectedKeeperId = $employee->id;
+            }
+        }
+
+        return view('transaction.loan.create', compact('employees', 'docNo', 'tools', 'detectedKeeperId'));
     }
 
     public function store(Request $request)
