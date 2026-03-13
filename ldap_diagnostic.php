@@ -12,6 +12,13 @@ echo "--- LDAP DIAGNOSTIC START ---\n";
 $ldap = new LdapService();
 $users = $ldap->getAllUsers();
 
+// Reflection to see baseDn (since it's protected)
+$reflection = new \ReflectionClass(\App\Services\LdapService::class);
+$property = $reflection->getProperty('baseDn');
+$property->setAccessible(true);
+$baseDns = $property->getValue($ldap);
+
+echo "Base DN(s) being searched: " . implode('; ', $baseDns) . "\n";
 echo "Total Users Found: " . count($users) . "\n\n";
 
 if (count($users) > 0) {

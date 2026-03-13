@@ -9,7 +9,9 @@ class LdapService
 
     public function __construct()
     {
-        $this->baseDn = config('services.ldap.base_dn');
+        $dnString = config('services.ldap.base_dn');
+        // Mendukung multiple Base DN dipisah titik koma (;)
+        $this->baseDn = array_filter(array_map('trim', explode(';', $dnString)));
     }
 
     /**
@@ -94,47 +96,57 @@ class LdapService
 
         if (@\ldap_bind($conn, $adminUser, $adminPass)) {
             \Log::info("LDAP Bind successful for admin user: " . $adminUser);
-            $filter = "(objectClass=user)";
-            $attributes = ['samaccountname', 'cn', 'name', 'mail', 'objectguid', 'dn', 'employeeid', 'department', 'title', 'telephonenumber', 'extensionattribute1', 'description'];
             
             $users = [];
-            try {
-                $search = @\ldap_search($conn, $this->baseDn, $filter, $attributes);
+            $seenGuids = [];
+            
+            foreach ($this->baseDn as $dn) {
+                \Log::info("Searching LDAP in Base DN: " . $dn);
+                $filter = "(objectClass=user)";
+                $attributes = ['samaccountname', 'cn', 'name', 'mail', 'objectguid', 'dn', 'employeeid', 'department', 'title', 'telephonenumber', 'extensionattribute1', 'description'];
+                
+                try {
+                    $search = @\ldap_search($conn, $dn, $filter, $attributes);
 
-                if ($search) {
-                    $entries = @\ldap_get_entries($conn, $search);
-                    if ($entries !== false) {
-                        for ($i = 0; $i < $entries['count']; $i++) {
-                            $entry = $entries[$i];
-                            
-                            // GUID is binary in AD
-                            $guid = isset($entry['objectguid'][0]) ? bin2hex($entry['objectguid'][0]) : null;
-                            
-                            // Fallback for username for ldap:sync (Regresi fix)
-                            $username = $entry['samaccountname'][0] ?? $entry['cn'][0] ?? $entry['name'][0] ?? null;
+                    if ($search) {
+                        $entries = @\ldap_get_entries($conn, $search);
+                        if ($entries !== false) {
+                            for ($i = 0; $i < $entries['count']; $i++) {
+                                $entry = $entries[$i];
+                                
+                                // GUID binary
+                                $guid = isset($entry['objectguid'][0]) ? bin2hex($entry['objectguid'][0]) : null;
+                                
+                                // Skip jika sudah diproses
+                                if ($guid && in_array($guid, $seenGuids)) continue;
+                                if ($guid) $seenGuids[] = $guid;
 
-                            // Common AD attributes for Employee ID / NIK
-                            $nik = $entry['employeeid'][0] 
-                                    ?? $entry['extensionattribute1'][0] 
-                                    ?? $entry['description'][0] 
-                                    ?? null;
+                                // Fallback username
+                                $username = $entry['samaccountname'][0] ?? $entry['cn'][0] ?? $entry['name'][0] ?? null;
 
-                            $users[] = [
-                                'username' => $username,
-                                'name' => $entry['cn'][0] ?? $entry['name'][0] ?? $username,
-                                'email' => $entry['mail'][0] ?? null,
-                                'guid' => $guid,
-                                'nik' => $nik,
-                                'department' => $entry['department'][0] ?? '-',
-                                'position' => $entry['title'][0] ?? '-',
-                                'phone' => $entry['telephonenumber'][0] ?? null,
-                                'raw_keys' => array_keys($entry) // For debugging
-                            ];
+                                // NIK detection
+                                $nik = $entry['employeeid'][0] 
+                                        ?? $entry['extensionattribute1'][0] 
+                                        ?? $entry['description'][0] 
+                                        ?? null;
+
+                                $users[] = [
+                                    'username' => $username,
+                                    'name' => $entry['cn'][0] ?? $entry['name'][0] ?? $username,
+                                    'email' => $entry['mail'][0] ?? null,
+                                    'guid' => $guid,
+                                    'nik' => $nik,
+                                    'department' => $entry['department'][0] ?? '-',
+                                    'position' => $entry['title'][0] ?? '-',
+                                    'phone' => $entry['telephonenumber'][0] ?? null,
+                                    'raw_keys' => array_keys($entry)
+                                ];
+                            }
                         }
                     }
+                } catch (\Throwable $e) {
+                    \Log::error("LDAP Search error in DN {$dn}: " . $e->getMessage());
                 }
-            } catch (\Throwable $e) {
-                \Log::error("LDAP Search error: " . $e->getMessage());
             }
             return $users;
         }
