@@ -9,7 +9,7 @@ class LdapService
 
     public function __construct()
     {
-        $this->baseDn = env('LDAP_BASE_DN');
+        $this->baseDn = config('services.ldap.base_dn');
     }
 
     /**
@@ -17,13 +17,15 @@ class LdapService
      */
     protected function connect()
     {
-        $host = env('LDAP_HOST');
-        $port = env('LDAP_PORT', 389);
+        $host = config('services.ldap.host', '127.0.0.1');
+        $port = config('services.ldap.port', 389);
         $protocol = ($port == 636) ? 'ldaps://' : 'ldap://';
+        $uri = $protocol . $host . ':' . $port;
 
-        $this->connection = \ldap_connect($protocol . $host, $port);
+        // Fix Deprecation: use URL instead of host/port arguments
+        $this->connection = \ldap_connect($uri);
 
-        if (env('LDAP_IGNORE_CERT', false)) {
+        if (config('services.ldap.ignore_cert', false)) {
             putenv('LDAPTLS_REQCERT=never');
         }
 
@@ -59,8 +61,8 @@ class LdapService
     protected function findUserDn($username)
     {
         $conn = $this->connect();
-        $adminUser = env('LDAP_ADMIN_USER');
-        $adminPass = env('LDAP_ADMIN_PASS');
+        $adminUser = config('services.ldap.admin_user');
+        $adminPass = config('services.ldap.admin_pass');
 
         if (@\ldap_bind($conn, $adminUser, $adminPass)) {
             $filter = "(samaccountname=$username)";
@@ -87,8 +89,8 @@ class LdapService
     public function getAllUsers()
     {
         $conn = $this->connect();
-        $adminUser = env('LDAP_ADMIN_USER');
-        $adminPass = env('LDAP_ADMIN_PASS');
+        $adminUser = config('services.ldap.admin_user');
+        $adminPass = config('services.ldap.admin_pass');
 
         if (@\ldap_bind($conn, $adminUser, $adminPass)) {
             \Log::info("LDAP Bind successful for admin user: " . $adminUser);
@@ -147,8 +149,8 @@ class LdapService
     public function getUserByUsername($username)
     {
         $conn = $this->connect();
-        $adminUser = env('LDAP_ADMIN_USER');
-        $adminPass = env('LDAP_ADMIN_PASS');
+        $adminUser = config('services.ldap.admin_user');
+        $adminPass = config('services.ldap.admin_pass');
 
         if (@\ldap_bind($conn, $adminUser, $adminPass)) {
             $filter = "(&(objectClass=user)(samaccountname=$username))";

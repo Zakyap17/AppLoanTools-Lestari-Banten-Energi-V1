@@ -26,7 +26,7 @@ class SyncLdapUsers extends Command
      */
     public function handle(LdapService $ldapService)
     {
-        if (!env('LDAP_ENABLED', false)) {
+        if (!config('services.ldap.enabled')) {
             $this->warn('LDAP synchronization is disabled in .env. Skipping...');
             return;
         }
