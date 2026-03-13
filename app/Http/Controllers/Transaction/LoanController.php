@@ -62,6 +62,10 @@ class LoanController extends Controller
             }
         }
 
+        // Generate Doc No: LOAN-YYYYMMDD-XXXX
+        $count = \App\Models\Loan::whereDate('created_at', today())->count() + 1;
+        $docNo = 'LOAN-' . date('Ymd') . '-' . str_pad($count, 4, '0', STR_PAD_LEFT);
+
         return view('transaction.loan.create', compact('employees', 'docNo', 'tools', 'detectedKeeperId'));
     }
 
