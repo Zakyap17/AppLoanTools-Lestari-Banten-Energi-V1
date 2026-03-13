@@ -342,6 +342,15 @@
                     </select>
                 </div>
 
+                {{-- SEARCH --}}
+                <div class="col-md-12 filter-group">
+                    <label class="form-label">Global Search (Code, Name, SN, etc.)</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light"><i class="bi bi-search"></i></span>
+                        <input type="text" name="search" class="form-control" value="{{ request('search') }}" placeholder="Enter Keyword...">
+                    </div>
+                </div>
+
                 {{-- DOCUMENT NO --}}
                 <div class="col-md-12 filter-group" id="documentNoFilterGroup" style="display: none;">
                     <label class="form-label">Document No</label>
