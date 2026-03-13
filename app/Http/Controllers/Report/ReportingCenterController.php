@@ -24,6 +24,7 @@ class ReportingCenterController extends Controller
         $employeeId = $request->query('employee');
         $dateFrom = $request->query('date_from');
         $dateTo = $request->query('date_to');
+        $isDeleted = $request->query('is_deleted'); // Filter for Soft Deleted items
 
         // Fetch the selected tool for display in Select2 (if any)
         $selectedTool = null;
@@ -275,6 +276,12 @@ class ReportingCenterController extends Controller
                 $query->whereDate('created_at', '<=', $dateTo);
             }
 
+            if ($isDeleted === 'active') {
+                $query->whereNull('tool_items.deleted_at');
+            } elseif ($isDeleted === 'deleted') {
+                $query->onlyTrashed();
+            }
+
             $data = $query->latest()->paginate(50)->withQueryString();
         } elseif ($reportType === 'Mutation') {
             $query = \App\Models\MutationLog::with(['tool' => function($q) { $q->withTrashed(); }, 'fromLocation', 'fromRack', 'toLocation', 'toRack', 'user']);
@@ -341,6 +348,7 @@ class ReportingCenterController extends Controller
         $employeeId = $request->query('employee');
         $dateFrom = $request->query('date_from');
         $dateTo = $request->query('date_to');
+        $isDeleted = $request->query('is_deleted');
 
         $data = [];
         $headers = [];
@@ -549,7 +557,7 @@ class ReportingCenterController extends Controller
             $filename = 'Damage_Lost_Report_' . date('Y-m-d_His') . '.xlsx';
 
         } elseif ($reportType === 'Tools Transaction') {
-            $query = \App\Models\ToolItem::with(['tool.location', 'tool.rack', 'createdBy', 'loans', 'loans.borrower']);
+            $query = \App\Models\ToolItem::withTrashed()->with(['tool.location', 'tool.rack', 'createdBy', 'loans', 'loans.borrower']);
 
             if ($locationId) {
                 $query->whereHas('tool', function ($q) use ($locationId) {
@@ -587,6 +595,12 @@ class ReportingCenterController extends Controller
             }
             if ($dateTo) {
                 $query->whereDate('created_at', '<=', $dateTo);
+            }
+            
+            if ($isDeleted === 'active') {
+                $query->whereNull('tool_items.deleted_at');
+            } elseif ($isDeleted === 'deleted') {
+                $query->onlyTrashed();
             }
 
             $items = $query->latest()->get();
