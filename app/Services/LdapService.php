@@ -92,7 +92,7 @@ class LdapService
 
         if (@\ldap_bind($conn, $adminUser, $adminPass)) {
             $filter = "(objectClass=user)";
-            $attributes = ['samaccountname', 'cn', 'name', 'mail', 'objectguid', 'dn'];
+            $attributes = ['samaccountname', 'cn', 'name', 'mail', 'objectguid', 'dn', 'employeeid', 'department', 'title', 'telephonenumber'];
             
             $users = [];
             try {
@@ -106,7 +106,11 @@ class LdapService
                                 'username' => $entries[$i]['samaccountname'][0] ?? null,
                                 'name' => $entries[$i]['cn'][0] ?? $entries[$i]['name'][0] ?? null,
                                 'email' => $entries[$i]['mail'][0] ?? null,
-                                'guid' => bin2hex($entries[$i]['objectguid'][0]) ?? null,
+                                'guid' => isset($entries[$i]['objectguid'][0]) ? bin2hex($entries[$i]['objectguid'][0]) : null,
+                                'nik' => $entries[$i]['employeeid'][0] ?? null,
+                                'department' => $entries[$i]['department'][0] ?? null,
+                                'position' => $entries[$i]['title'][0] ?? null,
+                                'phone' => $entries[$i]['telephonenumber'][0] ?? null,
                             ];
                         }
                     }

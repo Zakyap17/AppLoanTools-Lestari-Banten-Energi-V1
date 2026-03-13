@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Employee;
+use App\Services\LdapService;
 use Illuminate\Http\Request;
 
 class EmployeeController extends Controller
@@ -160,6 +161,37 @@ class EmployeeController extends Controller
 
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Import failed: ' . $e->getMessage());
+        }
+    }
+
+    public function syncFromLdap(LdapService $ldap)
+    {
+        try {
+            $users = $ldap->getAllUsers();
+            $count = 0;
+
+            foreach ($users as $user) {
+                // We only sync if they have a NIK (employeeid)
+                if (empty($user['nik'])) {
+                    continue;
+                }
+
+                Employee::updateOrCreate(
+                    ['nik' => $user['nik']],
+                    [
+                        'name' => $user['name'],
+                        'email' => $user['email'],
+                        'department' => $user['department'] ?? '-',
+                        'position' => $user['position'] ?? '-',
+                        'phone' => $user['phone'] ?? null,
+                    ]
+                );
+                $count++;
+            }
+
+            return redirect()->back()->with('success', "Synchronized {$count} employees from LDAP successfully.");
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'LDAP Sync failed: ' . $e->getMessage());
         }
     }
 }

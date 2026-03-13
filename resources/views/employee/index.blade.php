@@ -227,6 +227,19 @@
                             <i class="bi bi-upload me-2 text-primary"></i> Import Data
                         </button>
                     </li>
+                    @if(env('LDAP_ENABLED', false))
+                    <li>
+                        <hr class="dropdown-divider">
+                    </li>
+                    <li>
+                        <button class="dropdown-item py-2" type="button" onclick="confirmLdapSync()">
+                            <i class="bi bi-cloud-arrow-down me-2 text-info"></i> Sync from LDAP
+                        </button>
+                    </li>
+                    <form id="ldapSyncForm" action="{{ route('employee.sync-ldap') }}" method="POST" class="d-none">
+                        @csrf
+                    </form>
+                    @endif
                 </ul>
             </div>
         </div>
@@ -472,4 +485,21 @@
         </div>
     </div>
 
+    <script>
+        function confirmLdapSync() {
+            Swal.fire({
+                title: 'Sync from LDAP?',
+                text: "This will pull and update all employee data from the LDAP server. It might take a moment.",
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#3b82f6',
+                cancelButtonColor: '#94a3b8',
+                confirmButtonText: 'Yes, sync now!',
+                showLoaderOnConfirm: true,
+                preConfirm: () => {
+                    document.getElementById('ldapSyncForm').submit();
+                }
+            });
+        }
+    </script>
 @endsection

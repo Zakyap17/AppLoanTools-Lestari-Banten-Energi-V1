@@ -205,6 +205,7 @@ Route::middleware(['auth'])->group(function () {
     /* Employee */
     Route::get('/employee/template', [EmployeeController::class, 'template'])->name('employee.template');
     Route::post('/employee/import', [EmployeeController::class, 'import'])->name('employee.import');
+    Route::post('/employee/sync-ldap', [EmployeeController::class, 'syncFromLdap'])->name('employee.sync-ldap');
     Route::resource('/employee', EmployeeController::class)
         ->names([
             'index' => 'employee.index',
