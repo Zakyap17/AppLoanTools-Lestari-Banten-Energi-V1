@@ -13,7 +13,7 @@ class ReportingCenterController extends Controller
     {
         // Fetch data for filters
         $employees = Employee::orderBy('name')->get();
-        $locations = Location::where('storage_type', 'Room')->orderBy('name')->get();
+        $locations = Location::whereIn('storage_type', ['Room', 'Loan Tools', 'Department'])->orderBy('name')->get();
 
         $reportType = $request->query('report_type');
         $locationId = $request->query('location');
