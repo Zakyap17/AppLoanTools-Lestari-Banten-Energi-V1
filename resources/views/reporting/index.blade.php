@@ -723,19 +723,20 @@
                 <table class="table modern-table align-middle">
                     <thead>
                         <tr>
-                            <th style="width: 60px;">
-                                <div class="dropdown">
-                                    <button class="btn btn-sm btn-light dropdown-toggle border-0" type="button" id="filterDeletedDropdown" data-bs-toggle="dropdown" aria-expanded="false" style="background:transparent; padding:0;">
-                                        <i class="bi bi-funnel {{ request('is_deleted') && request('is_deleted') !== 'all' ? 'text-primary' : 'text-muted' }}" title="Filter Items"></i>
+                            <th style="width: 50px;" class="text-center align-middle pe-0">
+                                <div class="dropdown d-inline-block">
+                                    <button class="btn btn-sm btn-light dropdown-toggle border-0 shadow-none px-2 py-1" type="button" id="filterDeletedDropdown" data-bs-toggle="dropdown" aria-expanded="false" style="background:transparent;">
+                                        <i class="bi bi-funnel-fill {{ request('is_deleted') && request('is_deleted') !== 'all' ? 'text-primary' : 'text-muted' }}" style="font-size: 1.1rem;" title="Filter Items"></i>
                                     </button>
-                                    <ul class="dropdown-menu shadow-sm" aria-labelledby="filterDeletedDropdown" style="font-size: 0.85rem;">
-                                        <li><a class="dropdown-item {{ request('is_deleted', 'all') === 'all' ? 'active' : '' }}" href="{{ request()->fullUrlWithQuery(['is_deleted' => 'all']) }}">Show All Items</a></li>
-                                        <li><a class="dropdown-item {{ request('is_deleted') === 'active' ? 'active' : '' }}" href="{{ request()->fullUrlWithQuery(['is_deleted' => 'active']) }}">Active Items Only</a></li>
-                                        <li><a class="dropdown-item text-danger border-top mt-1 pt-1 {{ request('is_deleted') === 'deleted' ? 'active bg-danger text-white' : '' }}" href="{{ request()->fullUrlWithQuery(['is_deleted' => 'deleted']) }}">Deleted Items Only</a></li>
+                                    <ul class="dropdown-menu shadow-sm border-0 py-2" aria-labelledby="filterDeletedDropdown" style="font-size: 0.85rem; border-radius: 12px; min-width: 200px;">
+                                        <li><a class="dropdown-item py-2 px-3 fw-medium {{ request('is_deleted', 'all') === 'all' ? 'active bg-light text-primary rounded mx-1' : 'text-secondary' }}" href="{{ request()->fullUrlWithQuery(['is_deleted' => 'all']) }}"><i class="bi bi-list-ul me-2"></i>Show All Items</a></li>
+                                        <li><a class="dropdown-item py-2 px-3 fw-medium {{ request('is_deleted') === 'active' ? 'active bg-light text-primary rounded mx-1' : 'text-secondary' }}" href="{{ request()->fullUrlWithQuery(['is_deleted' => 'active']) }}"><i class="bi bi-check-circle me-2"></i>Active Items Only</a></li>
+                                        <li><hr class="dropdown-divider my-1"></li>
+                                        <li><a class="dropdown-item py-2 px-3 fw-medium text-danger {{ request('is_deleted') === 'deleted' ? 'bg-danger text-white rounded mx-1' : '' }}" href="{{ request()->fullUrlWithQuery(['is_deleted' => 'deleted']) }}"><i class="bi bi-trash3 me-2"></i>Deleted Items Only</a></li>
                                     </ul>
                                 </div>
                             </th>
-                            <th>No.</th>
+                            <th class="ps-1">No.</th>
                             <th>Entry Date</th>
                             <th>Storage</th>
                             <th>Bin</th>
