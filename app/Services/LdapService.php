@@ -93,7 +93,7 @@ class LdapService
         if (@\ldap_bind($conn, $adminUser, $adminPass)) {
             \Log::info("LDAP Bind successful for admin user: " . $adminUser);
             $filter = "(objectClass=user)";
-            $attributes = ['samaccountname', 'cn', 'name', 'mail', 'objectguid', 'dn', 'employeeid', 'department', 'title', 'telephonenumber'];
+            $attributes = ['samaccountname', 'cn', 'name', 'mail', 'objectguid', 'dn', 'employeeid', 'department', 'title', 'telephonenumber', 'extensionattribute1', 'description'];
             
             $users = [];
             try {
@@ -103,15 +103,30 @@ class LdapService
                     $entries = @\ldap_get_entries($conn, $search);
                     if ($entries !== false) {
                         for ($i = 0; $i < $entries['count']; $i++) {
+                            $entry = $entries[$i];
+                            
+                            // GUID is binary in AD
+                            $guid = isset($entry['objectguid'][0]) ? bin2hex($entry['objectguid'][0]) : null;
+                            
+                            // Fallback for username for ldap:sync (Regresi fix)
+                            $username = $entry['samaccountname'][0] ?? $entry['cn'][0] ?? $entry['name'][0] ?? null;
+
+                            // Common AD attributes for Employee ID / NIK
+                            $nik = $entry['employeeid'][0] 
+                                    ?? $entry['extensionattribute1'][0] 
+                                    ?? $entry['description'][0] 
+                                    ?? null;
+
                             $users[] = [
-                                'username' => $entries[$i]['samaccountname'][0] ?? null,
-                                'name' => $entries[$i]['cn'][0] ?? $entries[$i]['name'][0] ?? null,
-                                'email' => $entries[$i]['mail'][0] ?? null,
-                                'guid' => isset($entries[$i]['objectguid'][0]) ? bin2hex($entries[$i]['objectguid'][0]) : null,
-                                'nik' => $entries[$i]['employeeid'][0] ?? null,
-                                'department' => $entries[$i]['department'][0] ?? null,
-                                'position' => $entries[$i]['title'][0] ?? null,
-                                'phone' => $entries[$i]['telephonenumber'][0] ?? null,
+                                'username' => $username,
+                                'name' => $entry['cn'][0] ?? $entry['name'][0] ?? $username,
+                                'email' => $entry['mail'][0] ?? null,
+                                'guid' => $guid,
+                                'nik' => $nik,
+                                'department' => $entry['department'][0] ?? '-',
+                                'position' => $entry['title'][0] ?? '-',
+                                'phone' => $entry['telephonenumber'][0] ?? null,
+                                'raw_keys' => array_keys($entry) // For debugging
                             ];
                         }
                     }
