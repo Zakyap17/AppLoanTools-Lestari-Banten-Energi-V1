@@ -102,51 +102,66 @@ class LdapService
             
             foreach ($this->baseDn as $dn) {
                 \Log::info("Searching LDAP in Base DN: " . $dn);
+                
+                $pageSize = 1000;
+                $cookie = '';
+                
                 $filter = "(objectClass=user)";
                 $attributes = ['samaccountname', 'cn', 'name', 'mail', 'objectguid', 'dn', 'employeeid', 'department', 'title', 'telephonenumber', 'extensionattribute1', 'description'];
-                
-                try {
-                    $search = @\ldap_search($conn, $dn, $filter, $attributes);
 
-                    if ($search) {
-                        $entries = @\ldap_get_entries($conn, $search);
-                        if ($entries !== false) {
-                            for ($i = 0; $i < $entries['count']; $i++) {
-                                $entry = $entries[$i];
-                                
-                                // GUID binary
-                                $guid = isset($entry['objectguid'][0]) ? bin2hex($entry['objectguid'][0]) : null;
-                                
-                                // Skip jika sudah diproses
-                                if ($guid && in_array($guid, $seenGuids)) continue;
-                                if ($guid) $seenGuids[] = $guid;
+                do {
+                    try {
+                        // Set paging control
+                        @\ldap_control_paged_result($conn, $pageSize, true, $cookie);
 
-                                // Fallback username
-                                $username = $entry['samaccountname'][0] ?? $entry['cn'][0] ?? $entry['name'][0] ?? null;
+                        $search = @\ldap_search($conn, $dn, $filter, $attributes);
 
-                                // NIK detection
-                                $nik = $entry['employeeid'][0] 
-                                        ?? $entry['extensionattribute1'][0] 
-                                        ?? $entry['description'][0] 
-                                        ?? null;
+                        if ($search) {
+                            $entries = @\ldap_get_entries($conn, $search);
+                            if ($entries !== false) {
+                                for ($i = 0; $i < $entries['count']; $i++) {
+                                    $entry = $entries[$i];
+                                    
+                                    // GUID binary
+                                    $guid = isset($entry['objectguid'][0]) ? bin2hex($entry['objectguid'][0]) : null;
+                                    
+                                    // Skip jika sudah diproses
+                                    if ($guid && in_array($guid, $seenGuids)) continue;
+                                    if ($guid) $seenGuids[] = $guid;
 
-                                $users[] = [
-                                    'username' => $username,
-                                    'name' => $entry['cn'][0] ?? $entry['name'][0] ?? $username,
-                                    'email' => $entry['mail'][0] ?? null,
-                                    'guid' => $guid,
-                                    'nik' => $nik,
-                                    'department' => $entry['department'][0] ?? '-',
-                                    'position' => $entry['title'][0] ?? '-',
-                                    'phone' => $entry['telephonenumber'][0] ?? null,
-                                    'raw_keys' => array_keys($entry)
-                                ];
+                                    // Fallback username
+                                    $username = $entry['samaccountname'][0] ?? $entry['cn'][0] ?? $entry['name'][0] ?? null;
+
+                                    // NIK detection
+                                    $nik = $entry['employeeid'][0] 
+                                            ?? $entry['extensionattribute1'][0] 
+                                            ?? $entry['description'][0] 
+                                            ?? null;
+
+                                    $users[] = [
+                                        'username' => $username,
+                                        'name' => $entry['cn'][0] ?? $entry['name'][0] ?? $username,
+                                        'email' => $entry['mail'][0] ?? null,
+                                        'guid' => $guid,
+                                        'nik' => $nik,
+                                        'department' => $entry['department'][0] ?? '-',
+                                        'position' => $entry['title'][0] ?? '-',
+                                        'phone' => $entry['telephonenumber'][0] ?? null,
+                                        'raw_keys' => array_keys($entry)
+                                    ];
+                                }
                             }
+                            
+                            // Get cookie for next page
+                            @\ldap_control_paged_result_response($conn, $search, $cookie);
+                        } else {
+                            $cookie = null;
                         }
+                    } catch (\Throwable $e) {
+                        \Log::error("LDAP Search error in DN {$dn}: " . $e->getMessage());
+                        $cookie = null;
                     }
-                } catch (\Throwable $e) {
-                    \Log::error("LDAP Search error in DN {$dn}: " . $e->getMessage());
-                }
+                } while ($cookie !== null && $cookie != '');
             }
             return $users;
         }
