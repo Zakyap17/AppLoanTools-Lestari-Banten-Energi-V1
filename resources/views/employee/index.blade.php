@@ -227,7 +227,7 @@
                             <i class="bi bi-upload me-2 text-primary"></i> Import Data
                         </button>
                     </li>
-                    @if(env('LDAP_ENABLED', false))
+                    @if(config('services.ldap.enabled'))
                     <li>
                         <hr class="dropdown-divider">
                     </li>

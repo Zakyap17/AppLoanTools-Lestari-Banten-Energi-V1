@@ -35,4 +35,8 @@ return [
         ],
     ],
 
+    'ldap' => [
+        'enabled' => env('LDAP_ENABLED', false),
+    ],
+
 ];
