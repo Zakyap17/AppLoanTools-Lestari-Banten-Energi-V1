@@ -91,6 +91,7 @@ class LdapService
         $adminPass = env('LDAP_ADMIN_PASS');
 
         if (@\ldap_bind($conn, $adminUser, $adminPass)) {
+            \Log::info("LDAP Bind successful for admin user: " . $adminUser);
             $filter = "(objectClass=user)";
             $attributes = ['samaccountname', 'cn', 'name', 'mail', 'objectguid', 'dn', 'employeeid', 'department', 'title', 'telephonenumber'];
             
@@ -116,11 +117,12 @@ class LdapService
                     }
                 }
             } catch (\Throwable $e) {
-                // Abaikan error LDAP
+                \Log::error("LDAP Search error: " . $e->getMessage());
             }
             return $users;
         }
 
+        \Log::error("LDAP Bind failed for admin user: " . $adminUser . " Error: " . \ldap_error($conn));
         return [];
     }
 

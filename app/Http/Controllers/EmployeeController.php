@@ -168,11 +168,20 @@ class EmployeeController extends Controller
     {
         try {
             $users = $ldap->getAllUsers();
+            $totalFound = count($users);
+            \Log::info("LDAP Sync: Total users found in AD: " . $totalFound);
+
+            if ($totalFound > 0) {
+                \Log::info("Sample User from LDAP: " . json_encode($users[0]));
+            }
+
             $count = 0;
+            $skipped = 0;
 
             foreach ($users as $user) {
                 // We only sync if they have a NIK (employeeid)
                 if (empty($user['nik'])) {
+                    $skipped++;
                     continue;
                 }
 
@@ -189,8 +198,11 @@ class EmployeeController extends Controller
                 $count++;
             }
 
-            return redirect()->back()->with('success', "Synchronized {$count} employees from LDAP successfully.");
+            \Log::info("LDAP Sync Result: Updated {$count}, Skipped {$skipped}");
+
+            return redirect()->back()->with('success', "Synchronized {$count} employees from LDAP successfully. (Total found: {$totalFound}, Skipped: {$skipped})");
         } catch (\Exception $e) {
+            \Log::error("LDAP Sync Controller Error: " . $e->getMessage());
             return redirect()->back()->with('error', 'LDAP Sync failed: ' . $e->getMessage());
         }
     }
