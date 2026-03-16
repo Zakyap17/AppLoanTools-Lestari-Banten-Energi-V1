@@ -11,7 +11,7 @@ class TestEmailTemplates extends Command
      *
      * @var string
      */
-    protected $signature = 'test:send-emails {email : The recipient email address} {--type=all : The type of email (created, reminder, overdue, calibration, all)}';
+    protected $signature = 'test:send-emails {email : The recipient email address} {--type=all : The type of email (created, reminder, overdue, calibration, all)} {--sync : Send emails synchronously bypassing the queue}';
 
     /**
      * The console command description.
@@ -30,6 +30,8 @@ class TestEmailTemplates extends Command
 
         $this->info("Target: $email");
         $this->info("Mode: " . ucfirst($type));
+
+        $isSync = $this->option('sync');
 
         if ($type === 'all' || $type === 'created') {
             $this->info("1. Sending Loan Confirmation...");
@@ -52,7 +54,8 @@ class TestEmailTemplates extends Command
                     ]
                 ]
             ];
-            \Illuminate\Support\Facades\Mail::to($email)->send(new \App\Mail\LoanCreated($loanDetails));
+            $mailable = new \App\Mail\LoanCreated($loanDetails);
+            $isSync ? \Illuminate\Support\Facades\Mail::to($email)->sendNow($mailable) : \Illuminate\Support\Facades\Mail::to($email)->send($mailable);
             $this->info("   -> Sent.");
             if ($type === 'all')
                 sleep(2);
@@ -75,7 +78,8 @@ class TestEmailTemplates extends Command
             $loanMock->tool->name = 'Safety Harness Kit';
             $loanMock->tool->code = 'SAFETY-005';
 
-            \Illuminate\Support\Facades\Mail::to($email)->send(new \App\Mail\LoanReminder(collect([$loanMock]), 3));
+            $mailable = new \App\Mail\LoanReminder(collect([$loanMock]), 3);
+            $isSync ? \Illuminate\Support\Facades\Mail::to($email)->sendNow($mailable) : \Illuminate\Support\Facades\Mail::to($email)->send($mailable);
             $this->info("   -> Sent.");
             if ($type === 'all')
                 sleep(2);
@@ -113,7 +117,8 @@ class TestEmailTemplates extends Command
 
             $loans = collect([$overdueLoan1, $overdueLoan2]);
 
-            \Illuminate\Support\Facades\Mail::to($email)->send(new \App\Mail\OverdueLoanNotification('Jane Doe (Test)', $loans));
+            $mailable = new \App\Mail\OverdueLoanNotification('Jane Doe (Test)', $loans);
+            $isSync ? \Illuminate\Support\Facades\Mail::to($email)->sendNow($mailable) : \Illuminate\Support\Facades\Mail::to($email)->send($mailable);
             $this->info("   -> Sent.");
             if ($type === 'all')
                 sleep(2);
@@ -130,7 +135,8 @@ class TestEmailTemplates extends Command
 
             $tools = collect([$toolMock]);
 
-            \Illuminate\Support\Facades\Mail::to($email)->send(new \App\Mail\CalibrationReminder($tools));
+            $mailable = new \App\Mail\CalibrationReminder($tools);
+            $isSync ? \Illuminate\Support\Facades\Mail::to($email)->sendNow($mailable) : \Illuminate\Support\Facades\Mail::to($email)->send($mailable);
             $this->info("   -> Sent.");
         }
 
