@@ -41,6 +41,20 @@ Route::get('/logout', [LoginController::class, 'logout']); // Fallback for GET r
 // Keep-alive endpoint to refresh session
 Route::post('/keep-alive', [LoginController::class, 'keepAlive'])->middleware('auth');
 
+Route::get('/test-email', function () {
+    $to = request('to');
+    if (!$to) {
+        return "Tolong tambahkan tujuan email. Contoh: /test-email?to=nama@gmail.com";
+    }
+
+    try {
+        \Illuminate\Support\Facades\Mail::to($to)->send(new \App\Mail\TestMail());
+        return "Berhasil mengirim email percobaan ke " . $to . "! Coba cek inbox atau folder Spam.";
+    } catch (\Exception $e) {
+        return "Gagal mengirim email: " . $e->getMessage();
+    }
+});
+
 /* Authenticated Routes */
 Route::middleware(['auth'])->group(function () {
     /* Change Password */
