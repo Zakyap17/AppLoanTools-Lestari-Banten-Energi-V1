@@ -1,4 +1,4 @@
-﻿@extends('layouts.app')
+@extends('layouts.app')
 
 @section('title', 'Damage / Lost Reports')
 
@@ -189,9 +189,9 @@
                             </td>
                             <td>{{ $report->employee->name ?? '-' }}</td>
                             <td>
-                                <div class="fw-bold text-dark">{{ $report->tool->name }}</div>
+                                <div class="fw-bold text-dark">{{ $report->tool?->name ?? 'Deleted Asset' }}</div>
                                 <div class="small text-muted">
-                                    SN: {{ $report->item->serial_number ?? '-' }}
+                                    SN: {{ $report->item?->serial_number ?? '-' }}
                                     @php
                                         $siblings = \App\Models\DamageLost::with(['tool.location', 'tool.rack', 'item'])
                                             ->where('report_code', $report->report_code)
@@ -272,10 +272,10 @@
                                             @foreach($siblings as $index => $sib)
                                                 <tr>
                                                     <td class="text-center">{{ $index + 1 }}</td>
-                                                    <td class="text-muted">{{ $sib->tool->location->name ?? '-' }}
-                                                        ({{ $sib->tool->rack->code ?? '-' }})</td>
-                                                    <td class="text-muted">{{ $sib->item->serial_number ?? '-' }}</td>
-                                                    <td class="fw-bold text-dark">{{ $sib->tool->name ?? '-' }}</td>
+                                                    <td class="text-muted">{{ $sib->tool?->location?->name ?? '-' }}
+                                                        ({{ $sib->tool?->rack?->code ?? '-' }})</td>
+                                                    <td class="text-muted">{{ $sib->item?->serial_number ?? '-' }}</td>
+                                                    <td class="fw-bold text-dark">{{ $sib->tool?->name ?? 'Deleted Asset' }}</td>
                                                     <td class="text-center">{{ $sib->quantity }}</td>
                                                     <td class="text-center">
                                                         <span
@@ -587,13 +587,13 @@
                                                 @php
                                                     $isService = in_array($item->id, $openDamageItemIds ?? []);
                                                 @endphp
-                                                <option value="{{ $item->id }}" data-code="{{ $item->tool->code }}"
-                                                    data-name="{{ $item->tool->name }}" data-serial="{{ $item->serial_number }}"
-                                                    data-location="{{ $item->tool->location->name ?? '-' }}"
-                                                    data-bin="{{ $item->tool->rack->code ?? '-' }}"
-                                                    data-type="{{ $item->tool->type->name ?? '-' }}"
-                                                    data-price="{{ $item->tool->price }}" {{ $isService ? 'disabled' : '' }}>
-                                                    {{ $item->serial_number }} - {{ $item->tool->name }}
+                                                <option value="{{ $item->id }}" data-code="{{ $item->tool?->code ?? '' }}"
+                                                    data-name="{{ $item->tool?->name ?? '' }}" data-serial="{{ $item->serial_number }}"
+                                                    data-location="{{ $item->tool?->location?->name ?? '-' }}"
+                                                    data-bin="{{ $item->tool?->rack?->code ?? '-' }}"
+                                                    data-type="{{ $item->tool?->type?->name ?? '-' }}"
+                                                    data-price="{{ $item->tool?->price ?? 0 }}" {{ $isService ? 'disabled' : '' }}>
+                                                    {{ $item->serial_number }} - {{ $item->tool?->name ?? 'Deleted Asset' }}
                                                     {{ $isService ? ' - (SERVICE)' : '' }}
                                                 </option>
                                             @endforeach
