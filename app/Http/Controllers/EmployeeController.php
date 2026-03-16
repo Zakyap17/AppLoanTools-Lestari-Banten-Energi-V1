@@ -98,9 +98,19 @@ class EmployeeController extends Controller
         }
 
         $employee = Employee::findOrFail($id);
-        $employee->delete();
 
-        return redirect()->route('employee.index')->with('success', 'Employee deleted successfully.');
+        try {
+            $employee->delete();
+            return redirect()->route('employee.index')->with('success', 'Employee deleted successfully.');
+        } catch (\Illuminate\Database\QueryException $e) {
+            // Check if it's a constraint violation
+            if ($e->getCode() == "23000") {
+                return redirect()->back()->with('error', 'Cannot delete employee. They are referenced in existing loans or transactions.');
+            }
+            return redirect()->back()->with('error', 'An error occurred during deletion: ' . $e->getMessage());
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'An error occurred during deletion: ' . $e->getMessage());
+        }
     }
 
     public function template()
