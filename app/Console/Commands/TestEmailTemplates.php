@@ -68,8 +68,8 @@ class TestEmailTemplates extends Command
             $loanMock = new \stdClass();
             $loanMock->loan_code = 'LOAN-TEST-002';
             $loanMock->loan_quantity = 2;
-            $loanMock->loan_date = '2023-01-01';
-            $loanMock->expected_return_date = '2023-01-08';
+            $loanMock->loan_date = \Carbon\Carbon::parse('2023-01-01');
+            $loanMock->expected_return_date = \Carbon\Carbon::parse('2023-01-08');
 
             $loanMock->borrower = new \stdClass();
             $loanMock->borrower->name = 'Jane Doe (Test)';
@@ -93,8 +93,8 @@ class TestEmailTemplates extends Command
                 $loanMock = new \stdClass();
                 $loanMock->loan_code = 'LOAN-TEST-XXX';
                 $loanMock->loan_quantity = 1;
-                $loanMock->loan_date = '2023-01-01';
-                $loanMock->expected_return_date = '2023-01-08';
+                $loanMock->loan_date = \Carbon\Carbon::parse('2023-01-01');
+                $loanMock->expected_return_date = \Carbon\Carbon::parse('2023-01-08');
                 $loanMock->borrower = new \stdClass();
                 $loanMock->borrower->name = 'Jane Doe (Test)';
                 $loanMock->tool = new \stdClass();
@@ -113,7 +113,7 @@ class TestEmailTemplates extends Command
             $overdueLoan2->tool->name = 'Welding Machine';
             $overdueLoan2->item = null;
             $overdueLoan2->tool_item_id = null;
-            $overdueLoan2->expected_return_date = '2023-05-20'; // Very late
+            $overdueLoan2->expected_return_date = \Carbon\Carbon::parse('2023-05-20'); // Very late
 
             $loans = collect([$overdueLoan1, $overdueLoan2]);
 
@@ -128,10 +128,10 @@ class TestEmailTemplates extends Command
             $this->info("4. Sending Calibration Reminder...");
 
             $toolMock = new \stdClass();
-            $toolMock->name = 'Digital Micrometer';
-            $toolMock->code = 'MEASURE-001';
+            $toolMock->tool_name = 'Digital Micrometer';
+            $toolMock->tool_id = 'MEASURE-001';
             $toolMock->serial_number = 'SN-999-CAL';
-            $toolMock->calibration_due_date = date('Y-m-d', strtotime('+5 days'));
+            $toolMock->next_calibration_date = \Carbon\Carbon::parse(date('Y-m-d', strtotime('+5 days')));
 
             $tools = collect([$toolMock]);
 
