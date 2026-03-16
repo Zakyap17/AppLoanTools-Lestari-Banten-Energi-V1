@@ -226,6 +226,17 @@
                 // ---------------------------
 
                 // --- SELECT2 LOGIC ---
+                // Employee & Keeper Dropdowns
+                $('select[name="employee_id"]').select2({
+                    theme: 'bootstrap-5',
+                    width: '100%'
+                });
+
+                $('select[name="keeper_id"]').select2({
+                    theme: 'bootstrap-5',
+                    width: '100%'
+                });
+
                 $('#toolSelector').select2({
                     theme: 'bootstrap-5',
                     placeholder: 'Type at least 3 characters to search...',
