@@ -25,7 +25,7 @@ class SendLoanReminders extends Command
      */
     public function handle()
     {
-        $loans = \App\Models\Loan::with(['borrower', 'tool'])
+        $loans = \App\Models\Loan::with(['borrower', 'tool' => function($q) { $q->withTrashed(); }])
             ->where('status', 'ongoing')
             ->whereNotNull('expected_return_date')
             ->where(function ($query) {

@@ -413,7 +413,7 @@ class ReportingCenterController extends Controller
             $filename = 'Stock_Opname_Report_' . date('Y-m-d_His') . '.xlsx';
 
         } elseif ($reportType === 'Loan') {
-            $query = \App\Models\Loan::with(['tool.location', 'tool.rack', 'borrower']);
+            $query = \App\Models\Loan::with(['tool' => function($q) { $q->withTrashed()->with(['location', 'rack']); }, 'borrower']);
 
             if ($documentNo) {
                 $query->where('loan_code', 'ilike', "%" . trim($documentNo) . "%");
@@ -471,14 +471,14 @@ class ReportingCenterController extends Controller
             foreach ($loans as $index => $loan) {
                 $data[] = [
                     $index + 1,
-                    $loan->tool->location->name ?? '-',
-                    $loan->tool->rack->code ?? '-',
-                    $loan->tool->code ?? '-',
-                    $loan->tool->name ?? '-',
-                    $loan->tool->serial_number ?? '-',
-                    $loan->tool->uom ?? '-',
+                    $loan->tool?->location?->name ?? '-',
+                    $loan->tool?->rack?->code ?? '-',
+                    $loan->tool?->code ?? '-',
+                    $loan->tool?->name ?? '-',
+                    $loan->tool?->serial_number ?? '-',
+                    $loan->tool?->uom ?? '-',
                     max(1, $loan->loan_quantity),
-                    $loan->borrower->name ?? '-'
+                    $loan->borrower?->name ?? '-'
                 ];
             }
             $filename = 'Loan_Report_' . date('Y-m-d_His') . '.xlsx';
@@ -626,7 +626,7 @@ class ReportingCenterController extends Controller
             $filename = 'Tools_Transaction_Report_' . date('Y-m-d_His') . '.xlsx';
 
         } elseif ($reportType === 'Mutation') {
-            $query = \App\Models\MutationLog::with(['tool', 'fromLocation', 'fromRack', 'toLocation', 'toRack', 'user']);
+            $query = \App\Models\MutationLog::with(['tool' => function($q) { $q->withTrashed(); }, 'fromLocation', 'fromRack', 'toLocation', 'toRack', 'user']);
 
             if ($locationId) {
                 $query->where('to_location_id', $locationId);
@@ -675,13 +675,13 @@ class ReportingCenterController extends Controller
                     $index + 1,
                     $log->fromLocation->name ?? '-',
                     $log->fromRack->code ?? '-',
-                    $log->toLocation->name ?? '-',
-                    $log->toRack->code ?? '-',
-                    $log->tool->code ?? '-',
-                    $log->tool->code ?? '-',
-                    $log->tool->name ?? '-',
-                    $log->tool->quantity ?? 1,
-                    $log->user->name ?? '-',
+                    $log->toLocation?->name ?? '-',
+                    $log->toRack?->code ?? '-',
+                    $log->tool?->code ?? '-',
+                    $log->tool?->code ?? '-',
+                    $log->tool?->name ?? '-',
+                    $log->tool?->quantity ?? 1,
+                    $log->user?->name ?? '-',
                     $log->reason
                 ];
             }
