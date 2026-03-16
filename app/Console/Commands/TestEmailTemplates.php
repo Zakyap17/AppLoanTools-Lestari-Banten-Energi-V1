@@ -11,14 +11,14 @@ class TestEmailTemplates extends Command
      *
      * @var string
      */
-    protected $signature = 'test:send-emails {email : The recipient email address} {--type=all : The type of email (created, reminder, overdue, all)}';
+    protected $signature = 'test:send-emails {email : The recipient email address} {--type=all : The type of email (created, reminder, overdue, calibration, all)}';
 
     /**
      * The console command description.
      *
      * @var string
      */
-    protected $description = 'Send dummy emails for verification. Usage: --type=created|reminder|overdue|all';
+    protected $description = 'Send dummy emails for verification. Usage: --type=created|reminder|overdue|calibration|all';
 
     /**
      * Execute the console command.
@@ -114,6 +114,23 @@ class TestEmailTemplates extends Command
             $loans = collect([$overdueLoan1, $overdueLoan2]);
 
             \Illuminate\Support\Facades\Mail::to($email)->send(new \App\Mail\OverdueLoanNotification('Jane Doe (Test)', $loans));
+            $this->info("   -> Sent.");
+            if ($type === 'all')
+                sleep(2);
+        }
+
+        if ($type === 'all' || $type === 'calibration') {
+            $this->info("4. Sending Calibration Reminder...");
+
+            $toolMock = new \stdClass();
+            $toolMock->name = 'Digital Micrometer';
+            $toolMock->code = 'MEASURE-001';
+            $toolMock->serial_number = 'SN-999-CAL';
+            $toolMock->calibration_due_date = date('Y-m-d', strtotime('+5 days'));
+
+            $tools = collect([$toolMock]);
+
+            \Illuminate\Support\Facades\Mail::to($email)->send(new \App\Mail\CalibrationReminder($tools));
             $this->info("   -> Sent.");
         }
 
