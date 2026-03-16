@@ -25,7 +25,7 @@ class LoanController extends Controller
         $codes = $query->latest('loan_code')->paginate(10)->withQueryString();
 
         // 2. Fetch All Loan Items matching these codes
-        $allLoans = \App\Models\Loan::with(['tool.location', 'tool.rack', 'borrower', 'keeper', 'item'])
+        $allLoans = \App\Models\Loan::with(['tool' => function($q) { $q->withTrashed()->with(['location', 'rack']); }, 'borrower', 'keeper', 'item'])
             ->whereIn('loan_code', $codes->pluck('loan_code'))
             ->get()
             ->groupBy('loan_code');
@@ -384,7 +384,7 @@ class LoanController extends Controller
 
     public function print($loanCode)
     {
-        $loans = \App\Models\Loan::with(['tool', 'borrower', 'keeper', 'item'])
+        $loans = \App\Models\Loan::with(['tool' => function($q) { $q->withTrashed(); }, 'borrower', 'keeper', 'item'])
             ->where('loan_code', $loanCode)
             ->get();
 

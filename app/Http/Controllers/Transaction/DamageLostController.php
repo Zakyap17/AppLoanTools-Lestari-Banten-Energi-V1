@@ -15,7 +15,7 @@ class DamageLostController extends Controller
             ->groupBy('report_code')
             ->pluck('id');
 
-        $query = \App\Models\DamageLost::with(['tool.location', 'tool.rack', 'employee', 'item'])
+        $query = \App\Models\DamageLost::with(['tool' => function($q) { $q->withTrashed()->with(['location', 'rack']); }, 'employee', 'item'])
             ->whereIn('id', $latestIds);
 
         // Search Filter
@@ -76,7 +76,7 @@ class DamageLostController extends Controller
     public function getLoanDetails($loanCode)
     {
         // 1. Get the loan records for this code
-        $loans = \App\Models\Loan::with(['tool', 'borrower', 'item']) // Loading 'item' (ToolItem)
+        $loans = \App\Models\Loan::with(['tool' => function($q) { $q->withTrashed(); }, 'borrower', 'item']) // Loading 'item' (ToolItem)
             ->where('loan_code', $loanCode)
             ->whereIn('status', ['ongoing', 'overdue'])
             ->get();
@@ -268,10 +268,10 @@ class DamageLostController extends Controller
     public function print(Request $request, $id)
     {
         // Fetch the requested report
-        $report = \App\Models\DamageLost::with(['tool.location', 'tool.rack', 'employee'])->findOrFail($id);
+        $report = \App\Models\DamageLost::with(['tool' => function($q) { $q->withTrashed()->with(['location', 'rack']); }, 'employee'])->findOrFail($id);
 
         // Fetch ALL reports sharing the same report_code (Siblings for Multi-Item)
-        $reports = \App\Models\DamageLost::with(['tool.location', 'tool.rack', 'employee', 'item'])
+        $reports = \App\Models\DamageLost::with(['tool' => function($q) { $q->withTrashed()->with(['location', 'rack']); }, 'employee', 'item'])
             ->where('report_code', $report->report_code)
             ->get();
 
