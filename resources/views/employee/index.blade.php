@@ -461,7 +461,7 @@
                             </li>
                             <li>
                                 <button class="dropdown-item small text-danger"
-                                    onclick="openDeleteModal('{{ route('employee.destroy', $employee->id) }}', true)">
+                                    onclick="openDeleteModal('{{ route('employee.destroy', $employee->id) }}', true, '<i class=\'bi bi-info-circle-fill me-1\'></i> Yang Dapat Melakukan Remove/Delete Employee Hanya Admin IT Helpdesk. Silahkan Hubungi IT.')">
                                     <i class="bi bi-trash me-2"></i> Delete
                                 </button>
                             </li>

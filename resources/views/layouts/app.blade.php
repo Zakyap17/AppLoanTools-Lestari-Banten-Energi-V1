@@ -128,9 +128,11 @@
                 </div>
                 <div class="modal-body text-center px-4 pt-4 pb-0">
                     <h5 class="fw-bold text-dark mb-2">Delete Item?</h5>
-                    <p class="text-muted small mb-4">
+                    <p class="text-muted small mb-4" id="deleteModalWarningText">
                         This action is permanent and cannot be undone. Please confirm by entering your password.
                     </p>
+                    
+                    <div id="deleteModalCustomWarning" class="alert alert-warning small text-start d-none mb-4 fw-bold"></div>
 
                     <div class="mb-3 text-start bg-light p-3 rounded-3 border" id="passwordConfirmationContainer">
                         <label for="passwordConfirmation"
@@ -278,9 +280,18 @@
         });
 
         // Global Delete Modal Script
-        function openDeleteModal(actionUrl, requirePassword = false) {
+        function openDeleteModal(actionUrl, requirePassword = false, customWarning = null) {
             const deleteForm = document.getElementById('deleteForm');
             deleteForm.action = actionUrl;
+            
+            const customWarningEl = document.getElementById('deleteModalCustomWarning');
+            if (customWarning) {
+                customWarningEl.innerHTML = customWarning;
+                customWarningEl.classList.remove('d-none');
+            } else {
+                customWarningEl.innerHTML = '';
+                customWarningEl.classList.add('d-none');
+            }
 
             // Handle Password Visibility
             const passContainer = document.getElementById('passwordConfirmationContainer');
