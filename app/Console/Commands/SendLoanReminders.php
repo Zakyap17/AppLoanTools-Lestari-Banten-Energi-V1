@@ -55,10 +55,10 @@ class SendLoanReminders extends Command
 
             // Business logic:
             // 1. If > 7 days remaining, only send on Mondays.
-            // 2. If <= 7 days remaining (but >= 0, meaning not overdue yet), send every day.
+            // 2. If <= 7 days remaining AND 3. Overdue (< 0 days), send every day.
             if ($daysLeft > 7 && $isMonday) {
                 $shouldSendReminder = true;
-            } elseif ($daysLeft >= 0 && $daysLeft <= 7) {
+            } elseif ($daysLeft <= 7) {
                 $shouldSendReminder = true;
             }
 
