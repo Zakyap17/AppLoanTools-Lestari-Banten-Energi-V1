@@ -68,17 +68,19 @@ class LdapService
 
         if (@\ldap_bind($conn, $adminUser, $adminPass)) {
             $filter = "(samaccountname=$username)";
-            try {
-                $search = @\ldap_search($conn, $this->baseDn, $filter, ['dn']);
+            foreach ($this->baseDn as $dn) {
+                try {
+                    $search = @\ldap_search($conn, $dn, $filter, ['dn']);
 
-                if ($search) {
-                    $entries = @\ldap_get_entries($conn, $search);
-                    if ($entries !== false && $entries['count'] > 0) {
-                        return $entries[0]['dn'];
+                    if ($search) {
+                        $entries = @\ldap_get_entries($conn, $search);
+                        if ($entries !== false && $entries['count'] > 0) {
+                            return $entries[0]['dn'];
+                        }
                     }
+                } catch (\Throwable $e) {
+                    // Mencegah aplikasi crash jika Base DN tidak valid / No such object, go to next
                 }
-            } catch (\Throwable $e) {
-                // Mencegah aplikasi crash jika Base DN tidak valid / No such object
             }
         }
 
@@ -183,22 +185,24 @@ class LdapService
             $filter = "(&(objectClass=user)(samaccountname=$username))";
             $attributes = ['samaccountname', 'cn', 'name', 'mail', 'objectguid', 'dn'];
             
-            try {
-                $search = @\ldap_search($conn, $this->baseDn, $filter, $attributes);
+            foreach ($this->baseDn as $dn) {
+                try {
+                    $search = @\ldap_search($conn, $dn, $filter, $attributes);
 
-                if ($search) {
-                    $entries = @\ldap_get_entries($conn, $search);
-                    if ($entries !== false && $entries['count'] > 0) {
-                        return [
-                            'username' => $entries[0]['samaccountname'][0] ?? null,
-                            'name' => $entries[0]['cn'][0] ?? $entries[0]['name'][0] ?? null,
-                            'email' => $entries[0]['mail'][0] ?? null,
-                            'guid' => bin2hex($entries[0]['objectguid'][0]) ?? null,
-                        ];
+                    if ($search) {
+                        $entries = @\ldap_get_entries($conn, $search);
+                        if ($entries !== false && $entries['count'] > 0) {
+                            return [
+                                'username' => $entries[0]['samaccountname'][0] ?? null,
+                                'name' => $entries[0]['cn'][0] ?? $entries[0]['name'][0] ?? null,
+                                'email' => $entries[0]['mail'][0] ?? null,
+                                'guid' => bin2hex($entries[0]['objectguid'][0]) ?? null,
+                            ];
+                        }
                     }
+                } catch (\Throwable $e) {
+                    // Mencegah crash jika LDAP error, try next DN
                 }
-            } catch (\Throwable $e) {
-                // Mencegah crash jika LDAP error
             }
         }
 
