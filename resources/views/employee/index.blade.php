@@ -461,7 +461,7 @@
                             </li>
                             <li>
                                 <button class="dropdown-item small text-danger"
-                                    onclick="openDeleteModal('{{ route('employee.destroy', $employee->id) }}')">
+                                    onclick="openDeleteModal('{{ route('employee.destroy', $employee->id) }}', true)">
                                     <i class="bi bi-trash me-2"></i> Delete
                                 </button>
                             </li>
