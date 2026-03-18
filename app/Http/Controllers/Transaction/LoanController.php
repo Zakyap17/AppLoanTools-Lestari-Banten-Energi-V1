@@ -172,7 +172,7 @@ class LoanController extends Controller
                     $mail = Mail::to($borrower->email);
 
                     // Add Management BCC
-                    $mgmtEmails = env('MANAGEMENT_EMAILS');
+                    $mgmtEmails = config('mail.management_emails');
                     if ($mgmtEmails) {
                         $emails = array_map('trim', explode(',', $mgmtEmails));
                         $mail->bcc($emails);

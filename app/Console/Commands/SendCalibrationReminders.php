@@ -49,7 +49,7 @@ class SendCalibrationReminders extends Command
 
         $this->info("Found {$toolsToRemind->count()} tools needing calibration reminders.");
 
-        $mgmtEmails = env('MANAGEMENT_EMAILS');
+        $mgmtEmails = config('mail.management_emails');
         if ($mgmtEmails) {
             try {
                 $emails = array_map('trim', explode(',', $mgmtEmails));
