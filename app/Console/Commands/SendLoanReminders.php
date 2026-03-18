@@ -71,8 +71,10 @@ class SendLoanReminders extends Command
                         // Add Management BCC
                         $mgmtEmails = config('mail.management_emails');
                         if ($mgmtEmails) {
-                            $emails = array_map('trim', explode(',', $mgmtEmails));
+                        $emails = array_filter(array_map('trim', explode(',', $mgmtEmails)));
+                        if (!empty($emails)) {
                             $mail->bcc($emails);
+                        }
                         }
 
                         // Send email with ALL items in this document

@@ -86,7 +86,8 @@ This guide provides detailed, step-by-step resolution procedures for every speci
     2.  **Verify SMTP Configuration**: Open the `.env` file on the server. Ensure `MAIL_HOST` and `MAIL_PASSWORD` are correct.
     3.  **Check Task Scheduler**: Run `php artisan schedule:list` in the terminal.
     4.  **Manual Pulse**: Run `php artisan schedule:run` once to force an alert check.
-    5.  **Test via Tinker**: Run the manual mail test script found in the **Administrative (Tinker) Guide**.
+89.     5.  **Test via Tinker**: Run the manual mail test script found in the **Administrative (Tinker) Guide**.
+90.     6.  **Restart Queue Worker**: If emails are stuck, run `sudo supervisorctl restart laravel-worker:*` on the server.
 
 ---
 
@@ -94,6 +95,18 @@ This guide provides detailed, step-by-step resolution procedures for every speci
 **Problem: Search takes more than 10 seconds**
 - **Symptom**: Dashboard or Tool List is unresponsive.
 - **Step-by-Step Resolution:**
-    1.  **Clear Cache**: Run `php artisan optimize:clear` in the terminal.
-    2.  **Rebuild Indexes**: run `php artisan migrate --force` to ensure optimization migrations are applied.
-    3.  **Restart Web Server**: Run `sudo systemctl restart nginx` (Production) or restart XAMPP Apache.
+97.     1.  **Clear Cache**: Run `php artisan optimize:clear` in the terminal.
+98.     2.  **Repair Permissions**:
+        ```bash
+        sudo chown -R www-data:www-data storage bootstrap/cache
+        sudo chmod -R 775 storage bootstrap/cache
+        ```
+99.     3.  **Rebuild Indexes**: run `php artisan migrate --force` to ensure optimization migrations are applied.
+100.    4.  **Restart Web Server**: Run `sudo systemctl restart nginx` (Production) or restart XAMPP Apache.
+101. 
+102. ## 4. Code Fix Protocol (For Technical Staff)
+103. If an error persists despite clearing caches, follow these steps:
+104. 1.  **Check Logs**: Open `storage/logs/laravel.log`. Scroll to the bottom to find the latest "Stack Trace".
+105. 2.  **Identify File**: Look for the `app/Http/Controllers` or `app/Models` file mentioned in the error.
+106. 3.  **Trace Method**: Find the specific logic line causing the crash.
+107. 4.  **Sandbox Test**: Use `php artisan tinker` to test the failing line in isolation.

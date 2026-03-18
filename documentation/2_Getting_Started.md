@@ -74,6 +74,26 @@ php artisan view:cache
 php artisan optimize
 ```
 
+## Production Deployment (Ubuntu LTS)
+
+For a stable production environment on Ubuntu 22.04/24.04 LTS:
+
+1.  **Install PHP-FPM & Nginx**:
+    `sudo apt install nginx php8.2-fpm php8.2-pgsql php8.2-gd php8.2-mbstring ...`
+2.  **Queue Worker Setup**:
+    The system uses asynchronous queues for emails. Use **Supervisor** to keep the worker running:
+    ```ini
+    [program:laravel-worker]
+    process_name=%(program_name)s_%(process_num)02d
+    command=php /var/www/SystemGudang_Lbe/artisan queue:work --sleep=3 --tries=3
+    autostart=true
+    autorestart=true
+    user=www-data
+    ```
+3.  **Scheduler Integration**:
+    Add the Laravel scheduler to your crontab:
+    `* * * * * cd /var/www/SystemGudang_Lbe && php artisan schedule:run >> /dev/null 2>&1`
+
 ### C. File Permissions
 Ensure the web user can write to necessary directories:
 ```bash

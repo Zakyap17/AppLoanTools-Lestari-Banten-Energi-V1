@@ -64,8 +64,10 @@ class CheckOverdueLoans extends Command
                 // Add Management BCC
                 $mgmtEmails = config('mail.management_emails');
                 if ($mgmtEmails) {
-                    $emails = array_map('trim', explode(',', $mgmtEmails));
-                    $mail->bcc($emails);
+                    $emails = array_filter(array_map('trim', explode(',', $mgmtEmails)));
+                    if (!empty($emails)) {
+                        $mail->bcc($emails);
+                    }
                 }
 
                 $mail->send(new \App\Mail\OverdueLoanNotification($borrower->name, $loans));

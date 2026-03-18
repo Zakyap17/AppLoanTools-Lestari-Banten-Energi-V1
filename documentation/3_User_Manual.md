@@ -4,6 +4,13 @@ This manual provides granular, step-by-step operational instructions for every f
 
 ---
 
+### 0.1 Notification Management (Real-time Alerts)
+The topbar displays critical alerts (Overdue Loans, Maintenance Due).
+- To clear current sessions and force a refresh, click **Clear Notifications** on the Dashboard.
+- This is useful after manual database fixes or bulk returns.
+
+---
+
 ## SECTION 1: Master Data Foundations (Setup)
 
 ### 1.1 Locations Management (Storage Level 1)
@@ -90,24 +97,29 @@ Management of 3rd-party labs providing calibration services.
 ### 1.7 Employee (Personnel) Master
 Governance of users authorized to borrow assets.
 
-**Step-by-Step Operations:**
-1.  Navigate to **Master Data > Employees**.
-2.  **Manual Add**: Click **Create New**, Enter `NIK` (Critical: Unique ID), `Name`, `Department`, and `Position`.
-3.  **Bulk Sync**: Click **Import**, download the Template CSV, populate internal HR data, and upload.
+100. **Step-by-Step Operations:**
+101. 1.  Navigate to **Master Data > Employees**.
+102. 2.  **Manual Add**: Click **Create New**, Enter `NIK` (Critical: Unique ID), `Name`, `Department`, and `Position`.
+103. 3.  **Corporate Sync (LDAP)**: Click **Sync From LDAP** to automatically fetch and update employee data from the central company directory.
+104. 4.  **Bulk Sync**: Click **Import**, download the Template CSV, populate internal HR data, and upload.
 
 ---
 
 ### 1.8 Master Tools Registry (The Central Inventory)
 The primary entry point where assets are formally registered.
 
-**Step-by-Step Operations:**
-1.  Navigate to **Master Data > Tools**.
-2.  Click **Create New**.
-3.  **Core Id**: Enter `Tool Code` and `Serial Number`.
-4.  **Reference Data**: Select the `Location`, `Type`, and `Manufacturer` from the dropdowns established in previous steps.
-5.  **Maintenance Data**: Set initial `Purchase Date` and current `Calibration Status`.
-6.  **Availability**: Set initial `Quantity` and `Status` (Default: `Available`).
-7.  Click **Save**.
+110. **Step-by-Step Operations:**
+111. 1.  Navigate to **Master Data > Tools**.
+112. 2.  Click **Create New**.
+113. 3.  **Core Id**: Enter `Tool Code`, `Serial Number`, and **PO Number** (Procurement Reference).
+114. 4.  **Reference Data**: Select the `Location`, `Type`, and `Manufacturer` from the dropdowns established in previous steps.
+115. 5.  **Maintenance Data**: Set initial `Purchase Date` and current `Calibration Status`.
+116. 6.  **Availability**: Set initial `Quantity` and `Status` (Default: `Available`).
+117. 7.  Click **Save**.
+
+**Documenting Arrivals (Good Receipt):**
+- After saving, you can click **Good Receipt** on the tool detail page to print the formal arrival document.
+- For bulk arrivals, use **Print Batch** from the tools list to generate a single document for multiple new items.
 
 ---
 
