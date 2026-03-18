@@ -61,6 +61,9 @@ class SendCalibrationReminders extends Command
 
                 $mail->send(new CalibrationReminder($toolsToRemind));
 
+                // Log success
+                \Illuminate\Support\Facades\Log::info("Calibration Reminder dikirim ke: " . implode(', ', $emails));
+
                 // Update the sent timestamp so it isn't sent again today
                 foreach ($toolsToRemind as $tool) {
                     $tool->update(['last_calibration_reminder_sent_at' => now()]);

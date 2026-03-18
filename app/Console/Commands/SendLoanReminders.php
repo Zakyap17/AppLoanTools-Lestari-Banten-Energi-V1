@@ -78,6 +78,9 @@ class SendLoanReminders extends Command
                         // Send email with ALL items in this document
                         $mail->send(new \App\Mail\LoanReminder($items, $daysLeft));
 
+                        // Log success
+                        \Illuminate\Support\Facades\Log::info("Email Reminder dikirim ke: {$firstLoan->borrower->email} untuk Loan #{$loanCode}");
+
                         // Update last_reminder_sent_at for all items in the group
                         foreach ($items as $loan) {
                             $loan->update(['last_reminder_sent_at' => now()]);
