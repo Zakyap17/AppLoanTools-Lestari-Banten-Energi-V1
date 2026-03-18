@@ -38,6 +38,12 @@ class RackController extends Controller
      */
     public function destroy(string $id)
     {
+        $password = request('password_confirmation_val');
+
+        if (!auth()->user()->validatePassword($password)) {
+            return redirect()->back()->with('error', 'Incorrect password. Deletion cancelled.');
+        }
+
         $rack = Rack::findOrFail($id);
         $rack->delete();
 

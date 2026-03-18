@@ -90,6 +90,12 @@ class ManufacturerController extends Controller
      */
     public function destroy(string $id)
     {
+        $password = request('password_confirmation_val');
+
+        if (!auth()->user()->validatePassword($password)) {
+            return redirect()->back()->with('error', 'Incorrect password. Deletion cancelled.');
+        }
+
         try {
             $manufacturer = Manufacturer::findOrFail($id);
             $manufacturer->delete();
