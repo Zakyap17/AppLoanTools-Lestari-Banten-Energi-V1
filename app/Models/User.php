@@ -41,8 +41,13 @@ class User extends Authenticatable
      * @param string $password
      * @return bool
      */
-    public function validatePassword(string $password): bool
+    public function validatePassword(?string $password): bool
     {
+        // If password is null or empty, it's invalid
+        if (empty($password)) {
+            return false;
+        }
+
         // 1. If user has guid and LDAP is enabled, try LDAP first
         if ($this->guid && config('services.ldap.enabled')) {
             $ldapService = app(\App\Services\LdapService::class);

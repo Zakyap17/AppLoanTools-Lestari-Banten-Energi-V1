@@ -182,7 +182,7 @@
                                         class="btn btn-sm btn-outline-primary" title="Edit Vendor">
                                         <i class="bi bi-pencil-square"></i>
                                     </a>
-                                    <button onclick="openDeleteModal('{{ route('vendors-calibration.destroy', $vendor->id) }}')"
+                                    <button onclick="openDeleteModal('{{ route('vendors-calibration.destroy', $vendor->id) }}', true)"
                                         class="btn btn-sm btn-outline-danger" title="Delete Vendor">
                                         <i class="bi bi-trash"></i>
                                     </button>
