@@ -98,16 +98,16 @@ class LdapService
 
         if (@\ldap_bind($conn, $adminUser, $adminPass)) {
             \Log::info("LDAP Bind successful for admin user: " . $adminUser);
-            
+
             $users = [];
             $seenGuids = [];
-            
+
             foreach ($this->baseDn as $dn) {
                 \Log::info("Searching LDAP in Base DN: " . $dn);
-                
+
                 $pageSize = 1000;
                 $cookie = '';
-                
+
                 $filter = "(objectClass=user)";
                 $attributes = ['samaccountname', 'cn', 'name', 'mail', 'objectguid', 'dn', 'employeeid', 'department', 'title', 'telephonenumber', 'extensionattribute1', 'description'];
 
@@ -123,22 +123,24 @@ class LdapService
                             if ($entries !== false) {
                                 for ($i = 0; $i < $entries['count']; $i++) {
                                     $entry = $entries[$i];
-                                    
+
                                     // GUID binary
                                     $guid = isset($entry['objectguid'][0]) ? bin2hex($entry['objectguid'][0]) : null;
-                                    
+
                                     // Skip jika sudah diproses
-                                    if ($guid && in_array($guid, $seenGuids)) continue;
-                                    if ($guid) $seenGuids[] = $guid;
+                                    if ($guid && in_array($guid, $seenGuids))
+                                        continue;
+                                    if ($guid)
+                                        $seenGuids[] = $guid;
 
                                     // Fallback username
                                     $username = $entry['samaccountname'][0] ?? $entry['cn'][0] ?? $entry['name'][0] ?? null;
 
                                     // NIK detection: employeeid -> extensionattribute1 -> description -> FALLBACK: Username
-                                    $nik = $entry['employeeid'][0] 
-                                            ?? $entry['extensionattribute1'][0] 
-                                            ?? $entry['description'][0] 
-                                            ?? $username; // Use username as unique identifier if NIK is missing
+                                    $nik = $entry['employeeid'][0]
+                                        ?? $entry['extensionattribute1'][0]
+                                        ?? $entry['description'][0]
+                                        ?? $username; // Use username as unique identifier if NIK is missing
 
                                     $users[] = [
                                         'username' => $username,
@@ -153,7 +155,7 @@ class LdapService
                                     ];
                                 }
                             }
-                            
+
                             // Get cookie for next page
                             @\ldap_control_paged_result_response($conn, $search, $cookie);
                         } else {
@@ -184,7 +186,7 @@ class LdapService
         if (@\ldap_bind($conn, $adminUser, $adminPass)) {
             $filter = "(&(objectClass=user)(samaccountname=$username))";
             $attributes = ['samaccountname', 'cn', 'name', 'mail', 'objectguid', 'dn'];
-            
+
             foreach ($this->baseDn as $dn) {
                 try {
                     $search = @\ldap_search($conn, $dn, $filter, $attributes);
