@@ -470,15 +470,14 @@ class ToolsController extends Controller
                     // Handling Postgres Unique Violation (23505)
                     if ($e->getCode() == '23505') {
                         if (str_contains($msg, 'tools_code_unique')) {
-                            // Logic: data[0] is the code
-                            $errors[] = "Baris $rowIndex: Kode Alat '".($data[0] ?? '?')."' sudah terdaftar di sistem (mungkin ada di Archive).";
+                            $errors[] = "Baris $rowIndex: Kode Alat '".($data[0] ?? '?')."' sudah terdaftar di sistem (Archive/Aktif).";
                         } elseif (str_contains($msg, 'tools_serial_number_unique')) {
                             $errors[] = "Baris $rowIndex: Nomor Aset Ref '".($data[1] ?? '?')."' sudah digunakan oleh alat lain.";
                         } else {
                             $errors[] = "Baris $rowIndex: Duplikasi data unik pada database.";
                         }
                     } else {
-                        $errors[] = "Baris $rowIndex: Masalah Database - " . $e->getPrevious()?->getMessage() ?: $e->getMessage();
+                        $errors[] = "Baris $rowIndex: Masalah Database - " . ($e->getPrevious()?->getMessage() ?: $e->getMessage());
                     }
                 } catch (\Exception $e) {
                     $errors[] = "Baris $rowIndex: " . $e->getMessage();
@@ -495,7 +494,9 @@ class ToolsController extends Controller
                 $errorMsg = implode('<br>', array_slice($errors, 0, 5));
                 if (count($errors) > 5)
                     $errorMsg .= '<br>...and ' . (count($errors) - 5) . ' more errors.';
-                return redirect()->back()->with('error', 'Import failed with errors:<br>' . $errorMsg);
+                
+                $footerMsg = "<br><br><strong>Note:</strong> Pastikan template yang anda upload sudah benar dan peraturan pengisiannya sesuai.";
+                return redirect()->back()->with('error', 'Import failed with errors:<br>' . $errorMsg . $footerMsg);
             }
 
             \Illuminate\Support\Facades\DB::commit();
@@ -703,11 +704,23 @@ class ToolsController extends Controller
             }
         }
 
-        // 2. Create or Update Tool
-        // Using withTrashed() to ensure we find and potentially restore archived tools instead of failing on Unique Constraint
-        $tool = Tool::withTrashed()->where('code', $code)->first();
-        
-        $toolData = [
+        // 2. Explicit Checks for Duplicates (to provide friendly errors instead of raw DB exceptions)
+        $existingByCode = Tool::withTrashed()->where('code', $code)->first();
+        if ($existingByCode) {
+            $status = $existingByCode->trashed() ? 'di Archive' : 'Aktif';
+            throw new \Exception("Kode Alat '$code' sudah terdaftar di sistem ($status).");
+        }
+
+        if ($assetNo) {
+            $existingByAsset = Tool::where('serial_number', $assetNo)->first();
+            if ($existingByAsset) {
+                throw new \Exception("Nomor Aset Ref '$assetNo' sudah digunakan oleh alat lain.");
+            }
+        }
+
+        // Create New Tool (matching original behavior: unique tool per code)
+        $tool = Tool::create([
+            'code' => $code,
             'serial_number' => $assetNo,
             'po_number' => isset($data[11]) ? $data[11] : null,
             'name' => $desc,
@@ -719,21 +732,7 @@ class ToolsController extends Controller
             'location_id' => $locId,
             'rack_id' => $rackId,
             'quantity' => $quantity
-        ];
-
-        if ($tool) {
-            // Restore if it was archived
-            if ($tool->trashed()) {
-                $tool->restore();
-                // Also restore items that were soft-deleted
-                $tool->items()->withTrashed()->restore();
-            }
-            $tool->update($toolData);
-        } else {
-            // Create New
-            $toolData['code'] = $code;
-            $tool = Tool::create($toolData);
-        }
+        ]);
 
         // 3. Generate Items
         if ($quantity > 0) {
