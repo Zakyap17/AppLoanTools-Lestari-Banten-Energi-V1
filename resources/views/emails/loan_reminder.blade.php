@@ -108,7 +108,7 @@
                                             style="color: #94a3b8; font-size: 11px; text-transform: uppercase; font-weight: 700;">
                                             Loan Date</div>
                                         <div style="color: #334155; font-size: 14px; font-weight: 600;">
-                                            {{ $firstLoan->loan_date ? $firstLoan->loan_date->format('d M, Y') : '-' }}
+                                            {{ $firstLoan->loan_date ? \Carbon\Carbon::parse($firstLoan->loan_date)->format('d M, Y') : '-' }}
                                         </div>
                                     </td>
                                 </tr>
@@ -118,7 +118,7 @@
                                             style="color: #94a3b8; font-size: 11px; text-transform: uppercase; font-weight: 700;">
                                             Due Date</div>
                                         <div style="color: #334155; font-size: 14px; font-weight: 600;">
-                                            {{ $firstLoan->expected_return_date ? $firstLoan->expected_return_date->format('d M, Y') : '-' }}
+                                            {{ $firstLoan->expected_return_date ? \Carbon\Carbon::parse($firstLoan->expected_return_date)->format('d M, Y') : '-' }}
                                         </div>
                                     </td>
                                     <td width="50%">
