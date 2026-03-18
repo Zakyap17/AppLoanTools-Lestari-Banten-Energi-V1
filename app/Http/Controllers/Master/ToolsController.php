@@ -465,8 +465,23 @@ class ToolsController extends Controller
                         $warnings = array_merge($warnings, $rowWarnings);
                     }
                     $successCount++;
+                } catch (\Illuminate\Database\QueryException $e) {
+                    $msg = $e->getMessage();
+                    // Handling Postgres Unique Violation (23505)
+                    if ($e->getCode() == '23505') {
+                        if (str_contains($msg, 'tools_code_unique')) {
+                            // Logic: data[0] is the code
+                            $errors[] = "Baris $rowIndex: Kode Alat '".($data[0] ?? '?')."' sudah terdaftar di sistem (mungkin ada di Archive).";
+                        } elseif (str_contains($msg, 'tools_serial_number_unique')) {
+                            $errors[] = "Baris $rowIndex: Nomor Aset Ref '".($data[1] ?? '?')."' sudah digunakan oleh alat lain.";
+                        } else {
+                            $errors[] = "Baris $rowIndex: Duplikasi data unik pada database.";
+                        }
+                    } else {
+                        $errors[] = "Baris $rowIndex: Masalah Database - " . $e->getPrevious()?->getMessage() ?: $e->getMessage();
+                    }
                 } catch (\Exception $e) {
-                    $errors[] = "Row $rowIndex: " . $e->getMessage();
+                    $errors[] = "Baris $rowIndex: " . $e->getMessage();
                 }
             }
 
@@ -689,22 +704,36 @@ class ToolsController extends Controller
         }
 
         // 2. Create or Update Tool
-        $tool = Tool::updateOrCreate(
-            ['code' => $code],
-            [
-                'serial_number' => $assetNo,
-                'po_number' => isset($data[11]) ? $data[11] : null, // Add mapping for Column 11
-                'name' => $desc,
-                'type_id' => $typeId,
-                'sub_group_id' => $subGroupId,
-                'manufacturer_id' => $manfId,
-                'uom' => $uom,
-                'price' => $price,
-                'location_id' => $locId,
-                'rack_id' => $rackId,
-                'quantity' => $quantity
-            ]
-        );
+        // Using withTrashed() to ensure we find and potentially restore archived tools instead of failing on Unique Constraint
+        $tool = Tool::withTrashed()->where('code', $code)->first();
+        
+        $toolData = [
+            'serial_number' => $assetNo,
+            'po_number' => isset($data[11]) ? $data[11] : null,
+            'name' => $desc,
+            'type_id' => $typeId,
+            'sub_group_id' => $subGroupId,
+            'manufacturer_id' => $manfId,
+            'uom' => $uom,
+            'price' => $price,
+            'location_id' => $locId,
+            'rack_id' => $rackId,
+            'quantity' => $quantity
+        ];
+
+        if ($tool) {
+            // Restore if it was archived
+            if ($tool->trashed()) {
+                $tool->restore();
+                // Also restore items that were soft-deleted
+                $tool->items()->withTrashed()->restore();
+            }
+            $tool->update($toolData);
+        } else {
+            // Create New
+            $toolData['code'] = $code;
+            $tool = Tool::create($toolData);
+        }
 
         // 3. Generate Items
         if ($quantity > 0) {
