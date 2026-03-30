@@ -35,3 +35,8 @@ Schedule::command('ldap:sync')
 // Run queue worker in the background for emails
 Schedule::command('queue:work --stop-when-empty')
     ->everyMinute();
+
+// Backup Database Daily
+Schedule::command('db:backup')
+    ->timezone('Asia/Jakarta')
+    ->dailyAt('23:00');
