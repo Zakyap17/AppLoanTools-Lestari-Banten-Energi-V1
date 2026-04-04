@@ -231,6 +231,11 @@
                         </h6>
                     </li>
                     <li>
+                        <a class="dropdown-item" href="{{ asset('docs/SystemLoanWarehouse_User_Manual.pdf') }}" target="_blank">
+                            User Guide
+                        </a>
+                    </li>
+                    <li>
                         <a class="dropdown-item" href="{{ route('password.change') }}">
                             Change Password
                         </a>
