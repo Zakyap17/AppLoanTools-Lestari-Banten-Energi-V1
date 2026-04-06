@@ -686,6 +686,69 @@ class ReportingCenterController extends Controller
                 ];
             }
             $filename = 'Mutation_Report_' . date('Y-m-d_His') . '.xlsx';
+        } elseif ($reportType === 'Calibration') {
+            $query = \App\Models\CalibrationIssuing::with(['tool.location', 'tool.rack', 'vendor']);
+
+            if ($documentNo) {
+                $query->where('issue_code', 'ilike', "%" . trim($documentNo) . "%");
+            }
+
+            if ($locationId) {
+                $query->whereHas('tool', function ($q) use ($locationId) {
+                    $q->where('location_id', $locationId);
+                });
+            }
+            if ($rackId) {
+                $query->whereHas('tool', function ($q) use ($rackId) {
+                    $q->where('rack_id', $rackId);
+                });
+            }
+            if ($toolId) {
+                $query->where('tool_id', $toolId);
+            }
+            if ($search) {
+                $exactSearch = trim($search);
+                $query->where(function ($q) use ($search, $exactSearch) {
+                    $q->where('issue_code', 'ilike', "{$exactSearch}")
+                        ->orWhereHas('tool', function ($sub) use ($search, $exactSearch) {
+                            $sub->where('code', 'ilike', "{$exactSearch}")
+                                ->orWhere('name', 'ilike', "%{$search}%")
+                                ->orWhere('serial_number', 'ilike', "{$exactSearch}")
+                                ->orWhereHas('location', function ($loc) use ($search) {
+                                    $loc->where('name', 'ilike', "%{$search}%");
+                                })
+                                ->orWhereHas('rack', function ($rack) use ($search) {
+                                    $rack->where('code', 'ilike', "%{$search}%");
+                                });
+                        })
+                        ->orWhereHas('vendor', function ($sub) use ($search) {
+                            $sub->where('name', 'ilike', "%{$search}%");
+                        });
+                });
+            }
+            if ($dateFrom) {
+                $query->whereDate('issue_date', '>=', $dateFrom);
+            }
+            if ($dateTo) {
+                $query->whereDate('issue_date', '<=', $dateTo);
+            }
+
+            $calibrations = $query->latest()->get();
+            $headers = ['No', 'Issue Code', 'Issue Date', 'Item Code', 'Item Description', 'Vendor', 'Exp. Completion', 'Status'];
+
+            foreach ($calibrations as $index => $cal) {
+                $data[] = [
+                    $index + 1,
+                    $cal->issue_code,
+                    $cal->issue_date ? \Carbon\Carbon::parse($cal->issue_date)->format('d M Y') : '-',
+                    $cal->tool?->code ?? '-',
+                    $cal->tool?->name ?? '-',
+                    $cal->vendor?->name ?? '-',
+                    $cal->expected_completion_date ? \Carbon\Carbon::parse($cal->expected_completion_date)->format('d M Y') : '-',
+                    ucfirst(str_replace('_', ' ', $cal->status)),
+                ];
+            }
+            $filename = 'Calibration_Report_' . date('Y-m-d_His') . '.xlsx';
         } else {
             return redirect()->back()->with('error', 'Report type not supported for export');
         }
