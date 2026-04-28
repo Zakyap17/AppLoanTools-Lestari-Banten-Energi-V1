@@ -11,7 +11,7 @@ use App\Mail\CalibrationReminder;
 class SendCalibrationReminders extends Command
 {
     protected $signature = 'app:send-calibration-reminders';
-    protected $description = 'Send reminders for tools needing calibration (H-30 on Mondays, and daily from H-14)';
+    protected $description = 'Send reminders for tools needing calibration (H-90 on Mondays, and daily from H-14)';
 
     public function handle()
     {
@@ -34,8 +34,8 @@ class SendCalibrationReminders extends Command
             if ($daysLeft <= 14) {
                 // If it's H-14 or less (including overdue), send daily
                 $toolsToRemind->push($tool);
-            } elseif ($daysLeft <= 30 && $daysLeft > 14) {
-                // If it's between H-30 and H-15, only send on Mondays (1 = Monday)
+            } elseif ($daysLeft <= 90 && $daysLeft > 14) {
+                // If it's between H-90 and H-15, only send on Mondays (1 = Monday)
                 if ($today->dayOfWeek === Carbon::MONDAY) {
                     $toolsToRemind->push($tool);
                 }
