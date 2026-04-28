@@ -251,6 +251,7 @@
         </div>
 
         <form action="{{ route('reporting-center') }}" method="GET">
+            <input type="hidden" name="is_deleted" value="{{ request('is_deleted', 'all') }}">
             <div class="row g-3">
                 {{-- REPORT TYPE --}}
                 <div class="col-md-4 filter-group">
@@ -339,6 +340,21 @@
                         <option value="Returned" {{ request('status') == 'Returned' ? 'selected' : '' }}>Returned</option>
                         <option value="Damaged" {{ request('status') == 'Damaged' ? 'selected' : '' }}>Damaged</option>
                     </select>
+                </div>
+
+                {{-- SEARCH --}}
+                <div class="col-md-12 filter-group">
+                    <label class="form-label">Global Search (Code, Name, SN, etc.)</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light"><i class="bi bi-search"></i></span>
+                        <input type="text" name="search" class="form-control" value="{{ request('search') }}" placeholder="Enter Keyword...">
+                    </div>
+                </div>
+
+                {{-- DOCUMENT NO --}}
+                <div class="col-md-12 filter-group" id="documentNoFilterGroup" style="display: none;">
+                    <label class="form-label">Document No</label>
+                    <input type="text" name="document_no" class="form-control" value="{{ request('document_no') }}" placeholder="Enter Document No (Available for Loan, Return/Damage, and Calibration)">
                 </div>
             </div>
 
@@ -442,34 +458,88 @@
                 <table class="table modern-table align-middle">
                     <thead>
                         <tr>
+                            <th style="width: 50px;"></th>
                             <th>No.</th>
-                            <th>Storage</th>
-                            <th>Bin</th>
-                            <th>Tool No.</th>
-                            <th>Description</th>
-                            <th>Asset No (Serial)</th>
-                            <th>UOM</th>
-                            <th>Qty</th>
-                            <th>Employee Name</th>
+                            <th>Document No.</th>
+                            <th>Date</th>
+                            <th>Borrower Name</th>
+                            <th class="text-center">Total Tools</th>
+                            <th class="text-center">Action</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody class="accordion" id="loanAccordion">
                         @if(request('report_type') == 'Loan')
-                            @forelse($data as $index => $loan)
-                                <tr>
+                            @forelse($data as $index => $loanCodeRec)
+                                @php
+                                    $loanGroup = $allLoans[$loanCodeRec->loan_code] ?? collect();
+                                    $firstLoan = $loanGroup->first();
+                                    
+                                    if (!$firstLoan) continue; // Safety check
+                                    
+                                    $totalQty = $loanGroup->sum(function($item) {
+                                        return max(1, $item->loan_quantity);
+                                    });
+                                @endphp
+                                
+                                <tr data-bs-toggle="collapse" data-bs-target="#collapseLoan{{ $index }}"
+                                    aria-expanded="false" aria-controls="collapseLoan{{ $index }}"
+                                    style="cursor: pointer;">
+                                    <td class="text-center">
+                                        <i class="bi bi-chevron-down text-primary" style="transition: transform 0.3s;"></i>
+                                    </td>
                                     <td>{{ $index + 1 }}</td>
-                                    <td>{{ $loan->tool->location->name ?? '-' }}</td>
-                                    <td>{{ $loan->tool->rack->code ?? '-' }}</td>
-                                    <td class="fw-bold text-primary">{{ $loan->tool->code ?? '-' }}</td>
-                                    <td>{{ $loan->tool->name ?? '-' }}</td>
-                                    <td>{{ $loan->tool->serial_number ?? '-' }}</td>
-                                    <td class="text-center">{{ $loan->tool->uom ?? '-' }}</td>
-                                    <td class="text-center">{{ $loan->loan_quantity }}</td>
-                                    <td>{{ $loan->borrower->name ?? '-' }}</td>
+                                    <td class="fw-bold text-primary">{{ $firstLoan->loan_code }}</td>
+                                    <td>{{ \Carbon\Carbon::parse($firstLoan->loan_date)->format('d M Y') }}</td>
+                                    <td>{{ $firstLoan->borrower->name ?? '-' }}</td>
+                                    <td class="text-center fw-bold">{{ $totalQty }} Items</td>
+                                    <td class="text-center">
+                                        <a href="{{ route('loan.print', $firstLoan->loan_code) }}" target="_blank"
+                                            class="btn btn-sm btn-outline-primary" title="View/Print Document">
+                                            <i class="bi bi-printer"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                
+                                <!-- EXPANDED DETAILS -->
+                                <tr>
+                                    <td colspan="7" class="p-0 border-0">
+                                        <div id="collapseLoan{{ $index }}" class="accordion-collapse collapse"
+                                            data-bs-parent="#loanAccordion">
+                                            <div class="p-4 bg-light">
+                                                <h6 class="mb-3 fw-bold text-muted small text-uppercase">Items in this Document:</h6>
+                                                <table class="table table-sm table-bordered bg-white mb-0">
+                                                    <thead class="table-light">
+                                                        <tr>
+                                                            <th class="small text-muted">Storage</th>
+                                                            <th class="small text-muted">Bin</th>
+                                                            <th class="small text-muted">Tool No.</th>
+                                                            <th class="small text-muted">Description</th>
+                                                            <th class="small text-muted">Asset No (Serial)</th>
+                                                            <th class="small text-muted text-center">UOM</th>
+                                                            <th class="small text-muted text-center">Qty</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        @foreach($loanGroup as $item)
+                                                            <tr>
+                                                                <td class="small">{{ $item->tool?->location?->name ?? '-' }}</td>
+                                                                <td class="small">{{ $item->tool?->rack?->code ?? '-' }}</td>
+                                                                <td class="small text-primary fw-bold">{{ $item->tool?->code ?? '-' }}</td>
+                                                                <td class="small">{{ $item->tool?->name ?? '-' }}</td>
+                                                                <td class="small">{{ $item->item?->serial_number ?? '-' }}</td>
+                                                                <td class="small text-center">{{ $item->tool?->uom ?? '-' }}</td>
+                                                                <td class="small text-center fw-bold">{{ max(1, $item->loan_quantity) }}</td>
+                                                            </tr>
+                                                        @endforeach
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="9">
+                                    <td colspan="7">
                                         <div class="empty-state-table">
                                             <i class="bi bi-inbox"></i>
                                             <h5>No Loan History Found</h5>
@@ -480,7 +550,7 @@
                             @endforelse
                         @else
                             <tr>
-                                <td colspan="9">
+                                <td colspan="7">
                                     <div class="empty-state-table">
                                         <i class="bi bi-filter-circle"></i>
                                         <h5>Select Report Type</h5>
@@ -658,12 +728,24 @@
     <div id="table-receive" class="card report-table-card"
         style="display: {{ request('report_type') == 'Tools Transaction' ? 'block' : 'none' }};">
         <div class="card-body">
-            <div class="table-responsive">
+            <div class="table-responsive" style="min-height: 300px;">
                 <table class="table modern-table align-middle">
                     <thead>
                         <tr>
-                            <th style="width: 50px;"></th>
-                            <th>No.</th>
+                            <th style="width: 50px;" class="text-center align-middle pe-0">
+                                <div class="dropdown d-inline-block">
+                                    <button class="btn btn-sm btn-light dropdown-toggle border-0 shadow-none px-2 py-1" type="button" id="filterDeletedDropdown" data-bs-toggle="dropdown" aria-expanded="false" style="background:transparent;">
+                                        <i class="bi bi-funnel-fill {{ request('is_deleted') && request('is_deleted') !== 'all' ? 'text-primary' : 'text-muted' }}" style="font-size: 1.1rem;" title="Filter Items"></i>
+                                    </button>
+                                    <ul class="dropdown-menu shadow-sm border-0 py-2" aria-labelledby="filterDeletedDropdown" style="font-size: 0.85rem; border-radius: 12px; min-width: 200px;">
+                                        <li><a class="dropdown-item py-2 px-3 fw-medium {{ request('is_deleted', 'all') === 'all' ? 'active bg-light text-primary rounded mx-1' : 'text-secondary' }}" href="{{ request()->fullUrlWithQuery(['is_deleted' => 'all']) }}"><i class="bi bi-list-ul me-2"></i>Show All Items</a></li>
+                                        <li><a class="dropdown-item py-2 px-3 fw-medium {{ request('is_deleted') === 'active' ? 'active bg-light text-primary rounded mx-1' : 'text-secondary' }}" href="{{ request()->fullUrlWithQuery(['is_deleted' => 'active']) }}"><i class="bi bi-check-circle me-2"></i>Active Items Only</a></li>
+                                        <li><hr class="dropdown-divider my-1"></li>
+                                        <li><a class="dropdown-item py-2 px-3 fw-medium text-danger {{ request('is_deleted') === 'deleted' ? 'bg-danger text-white rounded mx-1' : '' }}" href="{{ request()->fullUrlWithQuery(['is_deleted' => 'deleted']) }}"><i class="bi bi-trash3 me-2"></i>Deleted Items Only</a></li>
+                                    </ul>
+                                </div>
+                            </th>
+                            <th class="ps-1">No.</th>
                             <th>Entry Date</th>
                             <th>Storage</th>
                             <th>Bin</th>
@@ -673,6 +755,7 @@
                             <th>Condition</th>
                             <th>Qty</th>
                             <th>Entered By</th>
+                            <th>Deleted By</th>
                         </tr>
                     </thead>
                     <tbody class="accordion" id="transactionAccordion">
@@ -701,9 +784,21 @@
                                     <td>{{ $item->created_at ? $item->created_at->format('d M Y') : '-' }}</td>
                                     <td>{{ $item->tool?->location?->name ?? '-' }}</td>
                                     <td>{{ $item->tool?->rack?->code ?? '-' }}</td>
-                                    <td class="text-primary fw-bold">{{ $item->tool?->code ?? '-' }}</td>
-                                    <td>{{ $item->tool?->name ?? '-' }}</td>
-                                    <td>{{ $item->serial_number ?? '-' }}</td>
+                                    <td>
+                                        <span class="text-primary fw-bold {{ $item->trashed() ? 'text-decoration-line-through text-danger' : '' }}">
+                                            {{ $item->tool?->code ?? '-' }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="{{ $item->trashed() ? 'text-decoration-line-through text-danger' : '' }}">
+                                            {{ $item->tool?->name ?? '-' }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="{{ $item->trashed() ? 'text-decoration-line-through text-danger' : '' }}">
+                                            {{ $item->serial_number ?? '-' }}
+                                        </span>
+                                    </td>
                                     <td>
                                         <span
                                             class="badge {{ strtolower($item->condition) == 'good' ? 'bg-success' : 'bg-warning text-dark' }}">
@@ -712,11 +807,18 @@
                                     </td>
                                     <td class="text-center">1</td>
                                     <td>{{ $item->createdBy?->name ?? '-' }}</td>
+                                    <td>
+                                        @if($item->trashed())
+                                            <span class="text-danger fw-bold"><i class="bi bi-person-x"></i> {{ $item->deletedBy->name ?? 'Unknown' }}</span>
+                                        @else
+                                            <span class="text-muted">-</span>
+                                        @endif
+                                    </td>
                                 </tr>
 
                                 <!-- Expandable Timeline Row -->
                                 <tr>
-                                    <td colspan="11" class="p-0 border-0">
+                                    <td colspan="12" class="p-0 border-0">
                                         <div id="collapseTransaction{{ $item->id }}" class="accordion-collapse collapse"
                                             data-bs-parent="#transactionAccordion">
                                             <div class="px-4 py-3 bg-light">
@@ -733,16 +835,37 @@
                                                         <h6 class="text-primary mb-1 fs-xs text-uppercase fw-bold"><i
                                                                 class="bi bi-person-up me-1"></i> Last Borrowed</h6>
                                                         <div class="fs-6 fw-bold text-dark">
-                                                            {{ $recentBorrowDate ? \Carbon\Carbon::parse($recentBorrowDate)->format('d M Y, H:i') : 'Never Borrowed' }}
+                                                            @if($recentBorrowDate)
+                                                                {{ \Carbon\Carbon::parse($recentBorrowDate)->format('d M Y, H:i') }}
+                                                                <br><small class="text-muted fw-normal">by {{ $latestActiveBorrow ? $latestActiveBorrow->borrower?->name : ($latestBorrow ? $latestBorrow->borrower?->name : '-') }}</small>
+                                                            @else
+                                                                Never Borrowed
+                                                            @endif
                                                         </div>
                                                     </div>
                                                     <div>
                                                         <h6 class="text-success mb-1 fs-xs text-uppercase fw-bold"><i
                                                                 class="bi bi-person-down me-1"></i> Last Returned</h6>
                                                         <div class="fs-6 fw-bold text-dark">
-                                                            {{ $recentReturnDate ? \Carbon\Carbon::parse($recentReturnDate)->format('d M Y, H:i') : ($latestActiveBorrow ? 'Currently Borrowed' : 'Never Returned') }}
+                                                            @if($recentReturnDate)
+                                                                {{ \Carbon\Carbon::parse($recentReturnDate)->format('d M Y, H:i') }}
+                                                                <br><small class="text-muted fw-normal">by {{ $latestBorrow ? $latestBorrow->borrower?->name : '-' }}</small>
+                                                            @else
+                                                                {{ $latestActiveBorrow ? 'Currently Borrowed' : 'Never Returned' }}
+                                                            @endif
                                                         </div>
                                                     </div>
+
+                                                    @if($item->trashed())
+                                                    <div class="ms-4 ps-4 border-start border-2 border-danger">
+                                                        <h6 class="text-danger mb-1 fs-xs text-uppercase fw-bold"><i
+                                                                class="bi bi-trash me-1"></i> Removed from System</h6>
+                                                        <div class="fs-6 fw-bold text-dark">
+                                                            {{ $item->deleted_at ? $item->deleted_at->format('d M Y, H:i') : 'Unknown' }}
+                                                            <br><small class="text-muted fw-normal">by {{ $item->deletedBy->name ?? 'Unknown' }}</small>
+                                                        </div>
+                                                    </div>
+                                                    @endif
                                                 </div>
                                             </div>
                                         </div>
@@ -750,7 +873,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="11">
+                                    <td colspan="12">
                                         <div class="empty-state-table">
                                             <i class="bi bi-inbox"></i>
                                             <h5>No Transaction History Found</h5>
@@ -883,7 +1006,7 @@
                         delay: 250, // Reduced delay for faster response
                         data: function (params) {
                             console.log('Searching for:', params.term);
-                            return { q: params.term };
+                            return { q: params.term, include_trashed: 1 };
                         },
                         processResults: function (data) {
                             console.log('Search results received:', data);
@@ -901,6 +1024,26 @@
 
                 });
             }
+
+            // Document No visibility
+            function toggleDocumentNo() {
+                const reportType = $('#reportTypeSelect').val();
+                const allowedTypes = ['Loan', 'Return / Damage', 'Calibration'];
+                
+                if (allowedTypes.includes(reportType)) {
+                    $('#documentNoFilterGroup').slideDown();
+                } else {
+                    $('#documentNoFilterGroup').slideUp();
+                    $('input[name="document_no"]').val(''); // Clear it if hidden
+                }
+            }
+
+            $('#reportTypeSelect').on('change', function() {
+                toggleDocumentNo();
+            });
+
+            // Initial state
+            toggleDocumentNo();
 
             initToolSelect();
         });

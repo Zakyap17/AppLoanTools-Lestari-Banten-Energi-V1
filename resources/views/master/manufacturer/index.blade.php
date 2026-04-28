@@ -187,7 +187,7 @@
                                     <button type="button"
                                         class="btn btn-light btn-sm rounded-3 shadow-sm border border-transparent text-danger"
                                         style="width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;"
-                                        onclick="openDeleteModal('{{ route('manufacture.destroy', $item->id) }}')"
+                                        onclick="openDeleteModal('{{ route('manufacture.destroy', $item->id) }}', true)"
                                         data-bs-toggle="tooltip" title="Delete">
                                         <i class="bi bi-trash"></i>
                                     </button>

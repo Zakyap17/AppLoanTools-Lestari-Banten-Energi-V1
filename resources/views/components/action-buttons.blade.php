@@ -15,7 +15,7 @@
 
     {{-- Delete --}}
     @if(isset($destroyRoute))
-        <button type="button" class="btn btn-sm btn-danger" title="Delete" onclick="openDeleteModal('{{ $destroyRoute }}')">
+        <button type="button" class="btn btn-sm btn-danger" title="Delete" onclick="openDeleteModal('{{ $destroyRoute }}', true)">
             <i class="bi bi-trash"></i>
         </button>
     @endif

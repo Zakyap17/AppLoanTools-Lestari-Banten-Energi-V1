@@ -4,8 +4,12 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
+use Illuminate\Database\Eloquent\SoftDeletes;
+
 class Tool extends Model
 {
+    use SoftDeletes;
+
     protected $table = 'tools';
     protected $guarded = ['id'];
 
@@ -31,6 +35,11 @@ class Tool extends Model
     public function type()
     {
         return $this->belongsTo(ToolType::class, 'type_id');
+    }
+
+    public function deletedBy()
+    {
+        return $this->belongsTo(User::class, 'deleted_by');
     }
 
     public function manufacturer()

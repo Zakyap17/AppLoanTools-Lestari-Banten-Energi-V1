@@ -21,7 +21,7 @@ class LoginController extends Controller
         ]);
 
         // 1. Attempt LDAP Authentication (If Enabled)
-        if (env('LDAP_ENABLED', false)) {
+        if (config('services.ldap.enabled')) {
             if ($ldapService->authenticate($credentials['username'], $credentials['password'])) {
 
                 // 2. Fetch User data from LDAP to sync profile
@@ -35,6 +35,9 @@ class LoginController extends Controller
                             'name' => $ldapUser['name'],
                             'guid' => $ldapUser['guid'],
                             'is_active' => true,
+                            // Provide a secure random password to satisfy the DB constraint
+                            // The user will still authenticate via LDAP, not this password.
+                            'password' => \Illuminate\Support\Facades\Hash::make(\Illuminate\Support\Str::random(32)),
                         ]
                     );
 
@@ -52,7 +55,7 @@ class LoginController extends Controller
             return redirect()->intended('dashboard');
         }
 
-        $errorMsg = env('LDAP_ENABLED', false)
+        $errorMsg = config('services.ldap.enabled')
             ? 'Credential LDAP tidak valid atau akun tidak terdaftar di Warehouse.'
             : 'Username atau password salah.';
 

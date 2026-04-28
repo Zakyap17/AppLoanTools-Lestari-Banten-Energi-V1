@@ -35,4 +35,14 @@ return [
         ],
     ],
 
+    'ldap' => [
+        'enabled' => env('LDAP_ENABLED', false),
+        'host' => env('LDAP_HOST', '127.0.0.1'),
+        'port' => env('LDAP_PORT', 389),
+        'base_dn' => env('LDAP_BASE_DN'),
+        'admin_user' => env('LDAP_ADMIN_USER'),
+        'admin_pass' => env('LDAP_ADMIN_PASS'),
+        'ignore_cert' => env('LDAP_IGNORE_CERT', false),
+    ],
+
 ];

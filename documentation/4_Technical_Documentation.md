@@ -8,10 +8,11 @@ The system is built on a robust relational schema tailored for Genting Energy's 
 - **Loans <-> Employees/Tools**: Links transactions to specific personnel and inventory.
 - **Locations <-> Racks**: Hierarchical storage mapping.
 
-### Advanced Search Optimization
-To handle thousands of assets without performance degradation, the system implements:
-- **GIN Indexes**: Used on PostgreSQL text columns for rapid fuzzy searching.
-- **Combined B-Tree Indexes**: Optimized for status filtering and date range queries.
+11. ### Advanced Data Integrity
+12. To prevent accidental data loss and maintain a perfect audit trail, the system implements:
+13. - **Soft Deletes**: Deleted records are hidden from the UI but remain in the database.
+14. - **`deleted_by` Tracking**: Every deletion records the User ID of the administrator who performed the action.
+15. - **GIN Indexes**: Used on PostgreSQL text columns for rapid fuzzy searching.
 
 ## Backend Components (Laravel)
 
@@ -20,14 +21,15 @@ To handle thousands of assets without performance degradation, the system implem
 - `ReportingCenterController`: Aggregates data from multiple tables using efficient Eloquent queries for high-speed Excel export.
 - `NotificationComposer`: A View Composer that injects real-time alert data (Overdue/Low Stock) into the Sidebar/Topbar without redundant database calls.
 
-### 2. Security & Middleware
-- **Auth Middleware**: Ensures only logged-in administrators can access management routes.
-- **CSRF Protection**: Native protection for all form submissions.
-- **Data Validation**: Strict Laravel Validation rules for all CSV/Excel imports to prevent database corruption.
+23. ### 2. Security & Middleware
+24. - **Auth Middleware**: Ensures only logged-in administrators can access management routes.
+25. - **Keep-Alive**: A background session-heartbeat mechanism to prevent session expiration during long entries.
+26. - **CSRF Protection**: Native protection for all form submissions.
+27. - **Data Validation**: Strict Laravel Validation rules for all CSV/Excel imports to prevent database corruption.
 
 ### 3. Automated Tasks (Cron)
 The system uses the `php artisan schedule:run` command to automate:
-- Checking for overdue loans.
+- Checking for overdue loans and sending **Queue-based Emails** via SMTP.
 - Updating notification caches.
 - Cleaning up temporary export files.
 

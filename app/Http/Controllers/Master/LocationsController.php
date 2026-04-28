@@ -165,6 +165,12 @@ class LocationsController extends Controller
      */
     public function destroy(string $id)
     {
+        $password = request('password_confirmation_val');
+
+        if (!auth()->user()->validatePassword($password)) {
+            return redirect()->back()->with('error', 'Incorrect password. Deletion cancelled.');
+        }
+
         try {
             $location = Location::findOrFail($id);
             $location->delete(); // Cascade delete handles racks

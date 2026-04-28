@@ -13,16 +13,18 @@ class ReportingCenterController extends Controller
     {
         // Fetch data for filters
         $employees = Employee::orderBy('name')->get();
-        $locations = Location::where('storage_type', 'Room')->orderBy('name')->get();
+        $locations = Location::whereIn('storage_type', ['Room', 'Loan Tools', 'Department'])->orderBy('name')->get();
 
         $reportType = $request->query('report_type');
         $locationId = $request->query('location');
         $rackId = $request->query('rack');
         $toolId = $request->query('tool_id'); // Select2 Tool ID
         $search = $request->query('search'); // Global Search (Text)
+        $documentNo = $request->query('document_no'); // Specific Document No Search
         $employeeId = $request->query('employee');
         $dateFrom = $request->query('date_from');
         $dateTo = $request->query('date_to');
+        $isDeleted = $request->query('is_deleted'); // Filter for Soft Deleted items
 
         // Fetch the selected tool for display in Select2 (if any)
         $selectedTool = null;
@@ -38,7 +40,7 @@ class ReportingCenterController extends Controller
                 ->join('tools', 'tool_items.tool_id', '=', 'tools.id')
                 ->leftJoin('locations', 'tools.location_id', '=', 'locations.id')
                 ->leftJoin('racks', 'tools.rack_id', '=', 'racks.id')
-                ->with(['tool.location', 'tool.rack', 'activeDamageReport']);
+                ->with(['tool' => function($q) { $q->withTrashed()->with(['location', 'rack']); }, 'activeDamageReport']);
 
             if ($locationId) {
                 $query->where('tools.location_id', $locationId);
@@ -50,12 +52,14 @@ class ReportingCenterController extends Controller
                 $query->where('tool_items.tool_id', $toolId);
             }
             if ($search) {
-                $query->where(function ($q) use ($search) {
-                    $q->where('tools.code', 'ilike', "%{$search}%")
+                $exactSearch = trim($search);
+                $query->where(function ($q) use ($search, $exactSearch) {
+                    $q->where('tools.code', 'ilike', "{$exactSearch}")
                         ->orWhere('tools.name', 'ilike', "%{$search}%")
+                        ->orWhere('tools.serial_number', 'ilike', "{$exactSearch}")
                         ->orWhere('locations.name', 'ilike', "%{$search}%")
                         ->orWhere('racks.code', 'ilike', "%{$search}%")
-                        ->orWhere('tool_items.serial_number', 'ilike', "%{$search}%");
+                        ->orWhere('tool_items.serial_number', 'ilike', "{$exactSearch}");
                 });
             }
             if ($employeeId) {
@@ -66,48 +70,70 @@ class ReportingCenterController extends Controller
 
             $data = $query->latest('tool_items.created_at')->paginate(50)->withQueryString();
         } elseif ($reportType === 'Loan') {
-            // Optimization: Use Left Joins for Loan Report too
-            $query = \App\Models\Loan::select('loans.*')
+            // Group Loan queries by loan_code for expandable table view
+            $baseQuery = \App\Models\Loan::select('loans.loan_code')
+                ->selectRaw('MAX(loans.created_at) as max_created_at')
                 ->join('tools', 'loans.tool_id', '=', 'tools.id')
                 ->leftJoin('locations', 'tools.location_id', '=', 'locations.id')
                 ->leftJoin('racks', 'tools.rack_id', '=', 'racks.id')
                 ->leftJoin('employees as borrowers', 'loans.employee_id', '=', 'borrowers.id')
                 ->leftJoin('tool_items', 'loans.tool_item_id', '=', 'tool_items.id')
-                ->with(['tool.location', 'tool.rack', 'borrower']);
+                ->groupBy('loans.loan_code');
+
+            if ($documentNo) {
+                $baseQuery->where('loans.loan_code', 'ilike', "%" . trim($documentNo) . "%");
+            }
 
             if ($locationId) {
-                $query->where('tools.location_id', $locationId);
+                $baseQuery->where('tools.location_id', $locationId);
             }
             if ($rackId) {
-                $query->where('tools.rack_id', $rackId);
+                $baseQuery->where('tools.rack_id', $rackId);
             }
             if ($toolId) {
-                $query->where('loans.tool_id', $toolId);
+                $baseQuery->where('loans.tool_id', $toolId);
             }
             if ($search) {
-                $query->where(function ($q) use ($search) {
-                    $q->where('loans.loan_code', 'ilike', "%{$search}%")
-                        ->orWhere('tools.code', 'ilike', "%{$search}%")
+                $exactSearch = trim($search);
+                $baseQuery->where(function ($q) use ($search, $exactSearch) {
+                    $q->where('loans.loan_code', 'ilike', "{$exactSearch}")
+                        ->orWhere('tools.code', 'ilike', "{$exactSearch}")
                         ->orWhere('tools.name', 'ilike', "%{$search}%")
+                        ->orWhere('tools.serial_number', 'ilike', "{$exactSearch}")
                         ->orWhere('locations.name', 'ilike', "%{$search}%")
                         ->orWhere('racks.code', 'ilike', "%{$search}%")
                         ->orWhere('borrowers.name', 'ilike', "%{$search}%")
-                        ->orWhere('tool_items.serial_number', 'ilike', "%{$search}%");
+                        ->orWhere('tool_items.serial_number', 'ilike', "{$exactSearch}");
                 });
             }
             if ($employeeId) {
-                $query->where('loans.employee_id', $employeeId);
+                $baseQuery->where('loans.employee_id', $employeeId);
             }
             if ($dateFrom) {
-                $query->whereDate('loans.loan_date', '>=', $dateFrom);
+                $baseQuery->whereDate('loans.loan_date', '>=', $dateFrom);
             }
             if ($dateTo) {
-                $query->whereDate('loans.loan_date', '<=', $dateTo);
+                $baseQuery->whereDate('loans.loan_date', '<=', $dateTo);
             }
 
-            $data = $query->latest('loans.created_at')->paginate(50)->withQueryString();
+            // Paginate distinct loan codes
+            $codes = $baseQuery->orderBy('max_created_at', 'desc')->paginate(50)->withQueryString();
+
+            // Fetch all items belonging to these documents
+            $allLoans = \App\Models\Loan::with(['tool' => function($q){ $q->withTrashed()->with(['location', 'rack']); }, 'borrower', 'item'])
+                ->whereIn('loan_code', $codes->pluck('loan_code'))
+                ->get()
+                ->groupBy('loan_code');
+
+            $data = $codes; // We pass the paginator to the view, which gives us the codes
+            view()->share('allLoans', $allLoans); // Share the details map with the view
+
         } elseif ($reportType === 'Return / Damage') {
-            $query = \App\Models\DamageLost::with(['tool.location', 'tool.rack', 'employee']);
+            $query = \App\Models\DamageLost::with(['tool' => function($q){ $q->withTrashed()->with(['location', 'rack']); }, 'employee']);
+
+            if ($documentNo) {
+                $query->where('report_code', 'ilike', "%" . trim($documentNo) . "%");
+            }
 
             if ($locationId) {
                 $query->whereHas('tool', function ($q) use ($locationId) {
@@ -123,12 +149,14 @@ class ReportingCenterController extends Controller
                 $query->where('tool_id', $toolId);
             }
             if ($search) {
-                $query->where(function ($q) use ($search) {
-                    $q->where('report_code', 'ilike', "%{$search}%")
+                $exactSearch = trim($search);
+                $query->where(function ($q) use ($search, $exactSearch) {
+                    $q->where('report_code', 'ilike', "{$exactSearch}")
                         ->orWhere('description', 'ilike', "%{$search}%")
-                        ->orWhereHas('tool', function ($sub) use ($search) {
-                            $sub->where('code', 'ilike', "%{$search}%")
+                        ->orWhereHas('tool', function ($sub) use ($search, $exactSearch) {
+                            $sub->where('code', 'ilike', "{$exactSearch}")
                                 ->orWhere('name', 'ilike', "%{$search}%")
+                                ->orWhere('serial_number', 'ilike', "{$exactSearch}")
                                 ->orWhereHas('location', function ($loc) use ($search) {
                                     $loc->where('name', 'ilike', "%{$search}%");
                                 })
@@ -139,8 +167,8 @@ class ReportingCenterController extends Controller
                         ->orWhereHas('employee', function ($sub) use ($search) {
                             $sub->where('name', 'ilike', "%{$search}%");
                         })
-                        ->orWhereHas('item', function ($sub) use ($search) {
-                            $sub->where('serial_number', 'ilike', "%{$search}%");
+                        ->orWhereHas('item', function ($sub) use ($exactSearch) {
+                            $sub->where('serial_number', 'ilike', "{$exactSearch}");
                         });
                 });
             }
@@ -156,7 +184,11 @@ class ReportingCenterController extends Controller
 
             $data = $query->latest()->paginate(50)->withQueryString();
         } elseif ($reportType === 'Calibration') {
-            $query = \App\Models\CalibrationIssuing::with(['tool.location', 'tool.rack', 'vendor']);
+            $query = \App\Models\CalibrationIssuing::with(['tool' => function($q) { $q->withTrashed()->with(['location', 'rack']); }, 'vendor']);
+
+            if ($documentNo) {
+                $query->where('issue_code', 'ilike', "%" . trim($documentNo) . "%");
+            }
 
             if ($locationId) {
                 $query->whereHas('tool', function ($q) use ($locationId) {
@@ -172,11 +204,13 @@ class ReportingCenterController extends Controller
                 $query->where('tool_id', $toolId);
             }
             if ($search) {
-                $query->where(function ($q) use ($search) {
-                    $q->where('issue_code', 'ilike', "%{$search}%")
-                        ->orWhereHas('tool', function ($sub) use ($search) {
-                            $sub->where('code', 'ilike', "%{$search}%")
+                $exactSearch = trim($search);
+                $query->where(function ($q) use ($search, $exactSearch) {
+                    $q->where('issue_code', 'ilike', "{$exactSearch}")
+                        ->orWhereHas('tool', function ($sub) use ($search, $exactSearch) {
+                            $sub->where('code', 'ilike', "{$exactSearch}")
                                 ->orWhere('name', 'ilike', "%{$search}%")
+                                ->orWhere('serial_number', 'ilike', "{$exactSearch}")
                                 ->orWhereHas('location', function ($loc) use ($search) {
                                     $loc->where('name', 'ilike', "%{$search}%");
                                 })
@@ -198,35 +232,41 @@ class ReportingCenterController extends Controller
 
             $data = $query->latest()->paginate(50)->withQueryString();
         } elseif ($reportType === 'Tools Transaction') {
-            $query = \App\Models\ToolItem::with(['tool.location', 'tool.rack', 'createdBy', 'loans']);
+            $query = \App\Models\ToolItem::withTrashed()->with(['tool' => function ($q) {
+                $q->withTrashed()->with(['location', 'rack']);
+            }, 'deletedBy', 'createdBy', 'loans', 'loans.borrower']);
 
             if ($locationId) {
                 $query->whereHas('tool', function ($q) use ($locationId) {
-                    $q->where('location_id', $locationId);
+                    $q->withTrashed()->where('location_id', $locationId);
                 });
             }
             if ($rackId) {
                 $query->whereHas('tool', function ($q) use ($rackId) {
-                    $q->where('rack_id', $rackId);
+                    $q->withTrashed()->where('rack_id', $rackId);
                 });
             }
             if ($toolId) {
                 $query->where('tool_id', $toolId);
             }
             if ($search) {
-                $query->where(function ($q) use ($search) {
-                    $q->whereHas('tool', function ($sub) use ($search) {
-                        $sub->where('code', 'ilike', "%{$search}%")
-                            ->orWhere('name', 'ilike', "%{$search}%")
-                            ->orWhere('po_number', 'ilike', "%{$search}%")
-                            ->orWhereHas('location', function ($loc) use ($search) {
-                                $loc->where('name', 'ilike', "%{$search}%");
-                            })
-                            ->orWhereHas('rack', function ($rack) use ($search) {
-                                $rack->where('code', 'ilike', "%{$search}%");
-                            });
+                $exactSearch = trim($search);
+                $query->where(function ($q) use ($search, $exactSearch) {
+                    $q->whereHas('tool', function ($sub) use ($search, $exactSearch) {
+                        $sub->withTrashed()->where(function($inner) use ($search, $exactSearch) {
+                            $inner->where('code', 'ilike', "{$exactSearch}")
+                                ->orWhere('name', 'ilike', "%{$search}%")
+                                ->orWhere('serial_number', 'ilike', "{$exactSearch}")
+                                ->orWhere('po_number', 'ilike', "{$exactSearch}")
+                                ->orWhereHas('location', function ($loc) use ($search) {
+                                    $loc->where('name', 'ilike', "%{$search}%");
+                                })
+                                ->orWhereHas('rack', function ($rack) use ($search) {
+                                    $rack->where('code', 'ilike', "%{$search}%");
+                                });
+                        });
                     })
-                        ->orWhere('serial_number', 'ilike', "%{$search}%");
+                        ->orWhere('serial_number', 'ilike', "{$exactSearch}");
                 });
             }
             if ($dateFrom) {
@@ -236,9 +276,15 @@ class ReportingCenterController extends Controller
                 $query->whereDate('created_at', '<=', $dateTo);
             }
 
+            if ($isDeleted === 'active') {
+                $query->whereNull('tool_items.deleted_at');
+            } elseif ($isDeleted === 'deleted') {
+                $query->onlyTrashed();
+            }
+
             $data = $query->latest()->paginate(50)->withQueryString();
         } elseif ($reportType === 'Mutation') {
-            $query = \App\Models\MutationLog::with(['tool', 'fromLocation', 'fromRack', 'toLocation', 'toRack', 'user']);
+            $query = \App\Models\MutationLog::with(['tool' => function($q) { $q->withTrashed(); }, 'fromLocation', 'fromRack', 'toLocation', 'toRack', 'user']);
 
             if ($locationId) {
                 $query->where('to_location_id', $locationId);
@@ -250,10 +296,12 @@ class ReportingCenterController extends Controller
                 $query->where('tool_id', $toolId);
             }
             if ($search) {
-                $query->where(function ($q) use ($search) {
-                    $q->whereHas('tool', function ($sub) use ($search) {
-                        $sub->where('code', 'ilike', "%{$search}%")
-                            ->orWhere('name', 'ilike', "%{$search}%");
+                $exactSearch = trim($search);
+                $query->where(function ($q) use ($search, $exactSearch) {
+                    $q->whereHas('tool', function ($sub) use ($search, $exactSearch) {
+                        $sub->where('code', 'ilike', "{$exactSearch}")
+                            ->orWhere('name', 'ilike', "%{$search}%")
+                            ->orWhere('serial_number', 'ilike', "{$exactSearch}");
                     })
                         ->orWhereHas('user', function ($sub) use ($search) {
                             $sub->where('name', 'ilike', "%{$search}%");
@@ -296,9 +344,11 @@ class ReportingCenterController extends Controller
         $rackId = $request->query('rack');
         $toolId = $request->query('tool_id');
         $search = $request->query('search'); // Global Search
+        $documentNo = $request->query('document_no'); // Specific Document No Search
         $employeeId = $request->query('employee');
         $dateFrom = $request->query('date_from');
         $dateTo = $request->query('date_to');
+        $isDeleted = $request->query('is_deleted');
 
         $data = [];
         $headers = [];
@@ -322,10 +372,12 @@ class ReportingCenterController extends Controller
                 $query->where('tool_id', $toolId);
             }
             if ($search) {
-                $query->where(function ($q) use ($search) {
-                    $q->whereHas('tool', function ($sub) use ($search) {
-                        $sub->where('code', 'ilike', "%{$search}%")
+                $exactSearch = trim($search);
+                $query->where(function ($q) use ($search, $exactSearch) {
+                    $q->whereHas('tool', function ($sub) use ($search, $exactSearch) {
+                        $sub->where('code', 'ilike', "{$exactSearch}")
                             ->orWhere('name', 'ilike', "%{$search}%")
+                            ->orWhere('serial_number', 'ilike', "{$exactSearch}")
                             ->orWhereHas('location', function ($loc) use ($search) {
                                 $loc->where('name', 'ilike', "%{$search}%");
                             })
@@ -333,7 +385,7 @@ class ReportingCenterController extends Controller
                                 $rack->where('code', 'ilike', "%{$search}%");
                             });
                     })
-                        ->orWhere('serial_number', 'ilike', "%{$search}%");
+                        ->orWhere('serial_number', 'ilike', "{$exactSearch}");
                 });
             }
 
@@ -361,7 +413,11 @@ class ReportingCenterController extends Controller
             $filename = 'Stock_Opname_Report_' . date('Y-m-d_His') . '.xlsx';
 
         } elseif ($reportType === 'Loan') {
-            $query = \App\Models\Loan::with(['tool.location', 'tool.rack', 'borrower']);
+            $query = \App\Models\Loan::with(['tool' => function($q) { $q->withTrashed()->with(['location', 'rack']); }, 'borrower']);
+
+            if ($documentNo) {
+                $query->where('loan_code', 'ilike', "%" . trim($documentNo) . "%");
+            }
 
             if ($locationId) {
                 $query->whereHas('tool', function ($q) use ($locationId) {
@@ -377,11 +433,13 @@ class ReportingCenterController extends Controller
                 $query->where('tool_id', $toolId);
             }
             if ($search) {
-                $query->where(function ($q) use ($search) {
-                    $q->where('loan_code', 'ilike', "%{$search}%")
-                        ->orWhereHas('tool', function ($sub) use ($search) {
-                            $sub->where('code', 'ilike', "%{$search}%")
+                $exactSearch = trim($search);
+                $query->where(function ($q) use ($search, $exactSearch) {
+                    $q->where('loan_code', 'ilike', "{$exactSearch}")
+                        ->orWhereHas('tool', function ($sub) use ($search, $exactSearch) {
+                            $sub->where('code', 'ilike', "{$exactSearch}")
                                 ->orWhere('name', 'ilike', "%{$search}%")
+                                ->orWhere('serial_number', 'ilike', "{$exactSearch}")
                                 ->orWhereHas('location', function ($loc) use ($search) {
                                     $loc->where('name', 'ilike', "%{$search}%");
                                 })
@@ -413,20 +471,24 @@ class ReportingCenterController extends Controller
             foreach ($loans as $index => $loan) {
                 $data[] = [
                     $index + 1,
-                    $loan->tool->location->name ?? '-',
-                    $loan->tool->rack->code ?? '-',
-                    $loan->tool->code ?? '-',
-                    $loan->tool->name ?? '-',
-                    $loan->tool->serial_number ?? '-',
-                    $loan->tool->uom ?? '-',
-                    $loan->loan_quantity,
-                    $loan->borrower->name ?? '-'
+                    $loan->tool?->location?->name ?? '-',
+                    $loan->tool?->rack?->code ?? '-',
+                    $loan->tool?->code ?? '-',
+                    $loan->tool?->name ?? '-',
+                    $loan->tool?->serial_number ?? '-',
+                    $loan->tool?->uom ?? '-',
+                    max(1, $loan->loan_quantity),
+                    $loan->borrower?->name ?? '-'
                 ];
             }
             $filename = 'Loan_Report_' . date('Y-m-d_His') . '.xlsx';
 
         } elseif ($reportType === 'Return / Damage') {
             $query = \App\Models\DamageLost::with(['tool.location', 'tool.rack', 'employee']);
+
+            if ($documentNo) {
+                $query->where('report_code', 'ilike', "%" . trim($documentNo) . "%");
+            }
 
             if ($locationId) {
                 $query->whereHas('tool', function ($q) use ($locationId) {
@@ -442,12 +504,14 @@ class ReportingCenterController extends Controller
                 $query->where('tool_id', $toolId);
             }
             if ($search) {
-                $query->where(function ($q) use ($search) {
-                    $q->where('report_code', 'ilike', "%{$search}%")
+                $exactSearch = trim($search);
+                $query->where(function ($q) use ($search, $exactSearch) {
+                    $q->where('report_code', 'ilike', "{$exactSearch}")
                         ->orWhere('description', 'ilike', "%{$search}%")
-                        ->orWhereHas('tool', function ($sub) use ($search) {
-                            $sub->where('code', 'ilike', "%{$search}%")
+                        ->orWhereHas('tool', function ($sub) use ($search, $exactSearch) {
+                            $sub->where('code', 'ilike', "{$exactSearch}")
                                 ->orWhere('name', 'ilike', "%{$search}%")
+                                ->orWhere('serial_number', 'ilike', "{$exactSearch}")
                                 ->orWhereHas('location', function ($loc) use ($search) {
                                     $loc->where('name', 'ilike', "%{$search}%");
                                 })
@@ -458,8 +522,8 @@ class ReportingCenterController extends Controller
                         ->orWhereHas('employee', function ($sub) use ($search) {
                             $sub->where('name', 'ilike', "%{$search}%");
                         })
-                        ->orWhereHas('item', function ($sub) use ($search) {
-                            $sub->where('serial_number', 'ilike', "%{$search}%");
+                        ->orWhereHas('item', function ($sub) use ($exactSearch) {
+                            $sub->where('serial_number', 'ilike', "{$exactSearch}");
                         });
                 });
             }
@@ -493,7 +557,7 @@ class ReportingCenterController extends Controller
             $filename = 'Damage_Lost_Report_' . date('Y-m-d_His') . '.xlsx';
 
         } elseif ($reportType === 'Tools Transaction') {
-            $query = \App\Models\ToolItem::with(['tool.location', 'tool.rack', 'createdBy', 'loans']);
+            $query = \App\Models\ToolItem::withTrashed()->with(['tool.location', 'tool.rack', 'createdBy', 'loans', 'loans.borrower']);
 
             if ($locationId) {
                 $query->whereHas('tool', function ($q) use ($locationId) {
@@ -509,19 +573,23 @@ class ReportingCenterController extends Controller
                 $query->where('tool_id', $toolId);
             }
             if ($search) {
-                $query->where(function ($q) use ($search) {
-                    $q->whereHas('tool', function ($sub) use ($search) {
-                        $sub->where('code', 'ilike', "%{$search}%")
-                            ->orWhere('name', 'ilike', "%{$search}%")
-                            ->orWhere('po_number', 'ilike', "%{$search}%")
-                            ->orWhereHas('location', function ($loc) use ($search) {
-                                $loc->where('name', 'ilike', "%{$search}%");
-                            })
-                            ->orWhereHas('rack', function ($rack) use ($search) {
-                                $rack->where('code', 'ilike', "%{$search}%");
-                            });
+                $exactSearch = trim($search);
+                $query->where(function ($q) use ($search, $exactSearch) {
+                    $q->whereHas('tool', function ($sub) use ($search, $exactSearch) {
+                        $sub->withTrashed()->where(function($inner) use ($search, $exactSearch) {
+                            $inner->where('code', 'ilike', "{$exactSearch}")
+                                ->orWhere('name', 'ilike', "%{$search}%")
+                                ->orWhere('serial_number', 'ilike', "{$exactSearch}")
+                                ->orWhere('po_number', 'ilike', "{$exactSearch}")
+                                ->orWhereHas('location', function ($loc) use ($search) {
+                                    $loc->where('name', 'ilike', "%{$search}%");
+                                })
+                                ->orWhereHas('rack', function ($rack) use ($search) {
+                                    $rack->where('code', 'ilike', "%{$search}%");
+                                });
+                        });
                     })
-                        ->orWhere('serial_number', 'ilike', "%{$search}%");
+                        ->orWhere('serial_number', 'ilike', "{$exactSearch}");
                 });
             }
             if ($dateFrom) {
@@ -529,6 +597,12 @@ class ReportingCenterController extends Controller
             }
             if ($dateTo) {
                 $query->whereDate('created_at', '<=', $dateTo);
+            }
+            
+            if ($isDeleted === 'active') {
+                $query->whereNull('tool_items.deleted_at');
+            } elseif ($isDeleted === 'deleted') {
+                $query->onlyTrashed();
             }
 
             $items = $query->latest()->get();
@@ -552,7 +626,7 @@ class ReportingCenterController extends Controller
             $filename = 'Tools_Transaction_Report_' . date('Y-m-d_His') . '.xlsx';
 
         } elseif ($reportType === 'Mutation') {
-            $query = \App\Models\MutationLog::with(['tool', 'fromLocation', 'fromRack', 'toLocation', 'toRack', 'user']);
+            $query = \App\Models\MutationLog::with(['tool' => function($q) { $q->withTrashed(); }, 'fromLocation', 'fromRack', 'toLocation', 'toRack', 'user']);
 
             if ($locationId) {
                 $query->where('to_location_id', $locationId);
@@ -564,10 +638,12 @@ class ReportingCenterController extends Controller
                 $query->where('tool_id', $toolId);
             }
             if ($search) {
-                $query->where(function ($q) use ($search) {
-                    $q->whereHas('tool', function ($sub) use ($search) {
-                        $sub->where('code', 'ilike', "%{$search}%")
-                            ->orWhere('name', 'ilike', "%{$search}%");
+                $exactSearch = trim($search);
+                $query->where(function ($q) use ($search, $exactSearch) {
+                    $q->whereHas('tool', function ($sub) use ($search, $exactSearch) {
+                        $sub->where('code', 'ilike', "{$exactSearch}")
+                            ->orWhere('name', 'ilike', "%{$search}%")
+                            ->orWhere('serial_number', 'ilike', "{$exactSearch}");
                     })
                         ->orWhereHas('user', function ($sub) use ($search) {
                             $sub->where('name', 'ilike', "%{$search}%");
@@ -599,17 +675,80 @@ class ReportingCenterController extends Controller
                     $index + 1,
                     $log->fromLocation->name ?? '-',
                     $log->fromRack->code ?? '-',
-                    $log->toLocation->name ?? '-',
-                    $log->toRack->code ?? '-',
-                    $log->tool->code ?? '-',
-                    $log->tool->code ?? '-',
-                    $log->tool->name ?? '-',
-                    $log->tool->quantity ?? 1,
-                    $log->user->name ?? '-',
+                    $log->toLocation?->name ?? '-',
+                    $log->toRack?->code ?? '-',
+                    $log->tool?->code ?? '-',
+                    $log->tool?->code ?? '-',
+                    $log->tool?->name ?? '-',
+                    $log->tool?->quantity ?? 1,
+                    $log->user?->name ?? '-',
                     $log->reason
                 ];
             }
             $filename = 'Mutation_Report_' . date('Y-m-d_His') . '.xlsx';
+        } elseif ($reportType === 'Calibration') {
+            $query = \App\Models\CalibrationIssuing::with(['tool.location', 'tool.rack', 'vendor']);
+
+            if ($documentNo) {
+                $query->where('issue_code', 'ilike', "%" . trim($documentNo) . "%");
+            }
+
+            if ($locationId) {
+                $query->whereHas('tool', function ($q) use ($locationId) {
+                    $q->where('location_id', $locationId);
+                });
+            }
+            if ($rackId) {
+                $query->whereHas('tool', function ($q) use ($rackId) {
+                    $q->where('rack_id', $rackId);
+                });
+            }
+            if ($toolId) {
+                $query->where('tool_id', $toolId);
+            }
+            if ($search) {
+                $exactSearch = trim($search);
+                $query->where(function ($q) use ($search, $exactSearch) {
+                    $q->where('issue_code', 'ilike', "{$exactSearch}")
+                        ->orWhereHas('tool', function ($sub) use ($search, $exactSearch) {
+                            $sub->where('code', 'ilike', "{$exactSearch}")
+                                ->orWhere('name', 'ilike', "%{$search}%")
+                                ->orWhere('serial_number', 'ilike', "{$exactSearch}")
+                                ->orWhereHas('location', function ($loc) use ($search) {
+                                    $loc->where('name', 'ilike', "%{$search}%");
+                                })
+                                ->orWhereHas('rack', function ($rack) use ($search) {
+                                    $rack->where('code', 'ilike', "%{$search}%");
+                                });
+                        })
+                        ->orWhereHas('vendor', function ($sub) use ($search) {
+                            $sub->where('name', 'ilike', "%{$search}%");
+                        });
+                });
+            }
+            if ($dateFrom) {
+                $query->whereDate('issue_date', '>=', $dateFrom);
+            }
+            if ($dateTo) {
+                $query->whereDate('issue_date', '<=', $dateTo);
+            }
+
+            $calibrations = $query->latest()->get();
+            $headers = ['No', 'Issue Code', 'Issue Date', 'Item Code', 'Item Description', 'Vendor', 'Exp. Completion', 'Status'];
+
+            foreach ($calibrations as $index => $cal) {
+                $data[] = [
+                    $index + 1,
+                    $cal->issue_code,
+                    $cal->issue_date ? \Carbon\Carbon::parse($cal->issue_date)->format('d M Y') : '-',
+                    $cal->tool?->code ?? '-',
+                    $cal->tool?->name ?? '-',
+                    $cal->vendor?->name ?? '-',
+                    $cal->expected_completion_date ? \Carbon\Carbon::parse($cal->expected_completion_date)->format('d M Y') : '-',
+                    ucfirst(str_replace('_', ' ', $cal->status)),
+                ];
+            }
+            $filename = 'Calibration_Report_' . date('Y-m-d_His') . '.xlsx';
         } else {
             return redirect()->back()->with('error', 'Report type not supported for export');
         }

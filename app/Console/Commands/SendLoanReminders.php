@@ -25,7 +25,7 @@ class SendLoanReminders extends Command
      */
     public function handle()
     {
-        $loans = \App\Models\Loan::with(['borrower', 'tool'])
+        $loans = \App\Models\Loan::with(['borrower', 'tool' => function($q) { $q->withTrashed(); }])
             ->where('status', 'ongoing')
             ->whereNotNull('expected_return_date')
             ->where(function ($query) {
@@ -55,10 +55,10 @@ class SendLoanReminders extends Command
 
             // Business logic:
             // 1. If > 7 days remaining, only send on Mondays.
-            // 2. If <= 7 days remaining (but >= 0, meaning not overdue yet), send every day.
+            // 2. If <= 7 days remaining AND 3. Overdue (< 0 days), send every day.
             if ($daysLeft > 7 && $isMonday) {
                 $shouldSendReminder = true;
-            } elseif ($daysLeft >= 0 && $daysLeft <= 7) {
+            } elseif ($daysLeft <= 7) {
                 $shouldSendReminder = true;
             }
 
@@ -69,14 +69,19 @@ class SendLoanReminders extends Command
                         $mail = \Illuminate\Support\Facades\Mail::to($firstLoan->borrower->email);
 
                         // Add Management BCC
-                        $mgmtEmails = env('MANAGEMENT_EMAILS');
+                        $mgmtEmails = config('mail.management_emails');
                         if ($mgmtEmails) {
-                            $emails = array_map('trim', explode(',', $mgmtEmails));
+                        $emails = array_filter(array_map('trim', explode(',', $mgmtEmails)));
+                        if (!empty($emails)) {
                             $mail->bcc($emails);
+                        }
                         }
 
                         // Send email with ALL items in this document
                         $mail->send(new \App\Mail\LoanReminder($items, $daysLeft));
+
+                        // Log success
+                        \Illuminate\Support\Facades\Log::info("Email Reminder dikirim ke: {$firstLoan->borrower->email} untuk Loan #{$loanCode}");
 
                         // Update last_reminder_sent_at for all items in the group
                         foreach ($items as $loan) {

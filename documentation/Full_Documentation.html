@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Genting Energy Group - MASTER OPERATIONAL & TECHNICAL MANUAL V1.0</title>
+    <title>Genting Energy Group - MASTER OPERATIONAL & TECHNICAL MANUAL V1.1</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&family=JetBrains+Mono:wght@400;700&display=swap');
 
@@ -259,7 +259,7 @@
             <div style="margin-top: 100px; font-size: 14pt; font-weight: bold;">Prepared for:<br>GENTING ENERGY GROUP
             </div>
             <div style="position: absolute; bottom: 50px; right: 50px; text-align: right; color: #666;">
-                <strong>CONFIDENTIAL DOCUMENT</strong><br>2026<br>Rev: 1.0 (Detailed & Complete)
+                <strong>CONFIDENTIAL DOCUMENT</strong><br>2026<br>Rev: 1.1 (ISO Ready & Detailed)
             </div>
         </div>
     </div>
@@ -304,6 +304,11 @@
                 <td><strong>Calibration Alert</strong></td>
                 <td><code>Tool::where('next_cal', '<', +7 days)</code></td>
                 <td>Schedule vendor pickup immediately.</td>
+            </tr>
+            <tr>
+                <td><strong>LDAP Sync Status</strong></td>
+                <td><code>LdapService::check()</code></td>
+                <td>Verify connection to corporate directory.</td>
             </tr>
         </table>
     </div>
@@ -395,6 +400,7 @@
             <li><strong>Barcode Scanning</strong>: Click field and scan physical tag.</li>
             <li>Select **Type**, **Group**, **Brand** from dropdowns (configured in Chap 3).</li>
             <li>Select **Location** & **Rack**.</li>
+            <li><strong>PO Number</strong>: Enter the associated Purchase Order code for data integrity.</li>
             <li>Note: Initial status is always **Available**.</li>
         </ol>
         <div class="code-title">SQL Schema</div>
@@ -587,6 +593,74 @@ User::create([
         </pre>
         <div class="code-title">Force Repair Status</div>
         <pre class="code-block">UPDATE tools SET status='available' WHERE status='in_use';</pre>
+
+        <div class="code-title">Repair Permissions (Ubuntu)</div>
+        <pre class="code-block">
+sudo chown -R www-data:www-data storage bootstrap/cache
+sudo chmod -R 775 storage bootstrap/cache
+</pre>
+    </div>
+
+    <!-- 10. UBUNTU ADMINISTRATION -->
+    <div class="paper-page">
+        <header class="doc-header">
+            <div class="header-left"><img src="logo1.png" class="logo-symbol"><img src="logo2.png" class="logo-text">
+            </div>
+            <div class="header-right">
+                <h1>Ubuntu Service</h1>
+                <div class="version-badge">VERSION 1.1</div>
+            </div>
+        </header>
+
+        <h2>10. Ubuntu LTS Administration Guide</h2>
+        <h3>10.1 Service Status & Control</h3>
+        <pre class="code-block">
+# Web Server
+sudo systemctl status nginx
+sudo systemctl restart nginx
+
+# Queue Worker (Supervisor)
+sudo supervisorctl status
+sudo supervisorctl restart laravel-worker:*
+</pre>
+
+        <h3>10.2 Maintenance & Troubleshooting</h3>
+        <ol class="sop-list">
+            <li><strong>Log Monitoring</strong>: <code>tail -f storage/logs/laravel.log</code></li>
+            <li><strong>PostgreSQL Backup</strong>: <code>pg_dump warehouse_db > backup.sql</code></li>
+            <li><strong>Clear App Cache</strong>: <code>php artisan optimize:clear</code></li>
+        </ol>
+    </div>
+
+    <!-- 11. ISO REVISION PROTOCOL -->
+    <div class="paper-page">
+        <header class="doc-header">
+            <div class="header-left"><img src="logo1.png" class="logo-symbol"><img src="logo2.png" class="logo-text">
+            </div>
+            <div class="header-right">
+                <h1>ISO Protocol</h1>
+                <div class="version-badge">VERSION 1.1</div>
+            </div>
+        </header>
+
+        <h2>11. ISO Document Revision Protocol</h2>
+        <p>Prosedur pembaharuan dokumen setiap 5 tahun atau sesuai kebutuhan update sistem.</p>
+        
+        <div class="ts-section">
+            <span class="ts-title">Step-by-Step Revision</span>
+            <div class="ts-item">
+                <span class="ts-problem">1. Update Source Files (.md)</span>
+                <span class="ts-solution">Buka folder documentation/, edit file markdown yang sesuai dengan fitur baru.</span>
+            </div>
+            <div class="ts-item">
+                <span class="ts-problem">2. Sync to Full_Documentation.html</span>
+                <span class="ts-solution">Salin perubahan dari file .md ke dalam section yang tepat di file master HTML ini.</span>
+            </div>
+            <div class="ts-item">
+                <span class="ts-problem">3. Print to PDF</span>
+                <span class="ts-solution">Buka HTML di browser, Ctrl+P, pilih "Save as PDF" untuk arsip fisik/digital ISO.</span>
+            </div>
+        </div>
     </div>
 
     <!-- 10. TECHNICAL ROUTE MAP -->
@@ -596,15 +670,15 @@ User::create([
             </div>
             <div class="header-right">
                 <h1>Architecture</h1>
-                <div class="version-badge">VERSION 1.0</div>
+                <div class="version-badge">VERSION 1.1</div>
             </div>
         </header>
 
-        <h2>10. Technical Architecture: Service Route Map</h2>
+        <h2>12. Technical Architecture: Service Route Map</h2>
         <p>This section maps every URL Endpoint to its Backend Controller ("What connects to where"). Use this for
             debugging 404 errors or tracing logic flows.</p>
 
-        <h3>10.1 Authentication & Core</h3>
+        <h3>12.1 Authentication & Core</h3>
         <table class="data-dict">
             <tr>
                 <th>URI Endpoint</th>
@@ -638,7 +712,7 @@ User::create([
             </tr>
         </table>
 
-        <h3>10.2 Master Data Routes</h3>
+        <h3>12.2 Master Data Routes</h3>
         <table class="data-dict">
             <tr>
                 <th>URI / Resource</th>
@@ -671,13 +745,14 @@ User::create([
                 <td>Brand Management</td>
             </tr>
             <tr>
-                <td>/employee</td>
-                <td>EmployeeController</td>
-                <td>Borrower Database</td>
+                <td>/employee/sync-ldap</td>
+                <td>POST</td>
+                <td>EmployeeController::syncFromLdap</td>
+                <td>Sync from Company Directory</td>
             </tr>
         </table>
 
-        <h3>10.3 Transactional Logic Flow</h3>
+        <h3>12.3 Transactional Logic Flow</h3>
         <table class="data-dict">
             <tr>
                 <th>URI Endpoint</th>
@@ -711,7 +786,7 @@ User::create([
             </tr>
         </table>
 
-        <h3>10.4 Reporting & Analytics</h3>
+        <h3>12.4 Reporting & Analytics</h3>
         <table class="data-dict">
             <tr>
                 <th>URI Endpoint</th>
@@ -724,9 +799,16 @@ User::create([
                 <td>UI Filter Selection</td>
             </tr>
             <tr>
-                <td>/reporting-center/export</td>
-                <td>ReportingCenterController::exportExcel</td>
-                <td><strong>.XLSX File Download</strong></td>
+                <td>/tools/{id}/good-receipt</td>
+                <td>GET</td>
+                <td>ToolsController::goodReceipt</td>
+                <td>Single Arrival PDF</td>
+            </tr>
+            <tr>
+                <td>/tools/print-batch/{id}</td>
+                <td>GET</td>
+                <td>ToolsController::printBatch</td>
+                <td>Batch Arrival PDF</td>
             </tr>
         </table>
     </div>

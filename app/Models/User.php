@@ -36,6 +36,31 @@ class User extends Authenticatable
     ];
 
     /**
+     * Validate the user's password (supports both local and LDAP).
+     *
+     * @param string $password
+     * @return bool
+     */
+    public function validatePassword(?string $password): bool
+    {
+        // If password is null or empty, it's invalid
+        if (empty($password)) {
+            return false;
+        }
+
+        // 1. If user has guid and LDAP is enabled, try LDAP first
+        if ($this->guid && config('services.ldap.enabled')) {
+            $ldapService = app(\App\Services\LdapService::class);
+            if ($ldapService->authenticate($this->username, $password)) {
+                return true;
+            }
+        }
+
+        // 2. Fallback to local hash check (for Admin/Local users or if LDAP fails/is disabled)
+        return \Illuminate\Support\Facades\Hash::check($password, $this->password);
+    }
+
+    /**
      * Get the attributes that should be cast.
      *
      * @return array<string, string>

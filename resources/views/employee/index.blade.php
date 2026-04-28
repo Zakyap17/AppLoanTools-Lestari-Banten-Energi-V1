@@ -227,6 +227,21 @@
                             <i class="bi bi-upload me-2 text-primary"></i> Import Data
                         </button>
                     </li>
+                    {{-- 
+                    @if(config('services.ldap.enabled'))
+                    <li>
+                        <hr class="dropdown-divider">
+                    </li>
+                    <li>
+                        <button class="dropdown-item py-2" type="button" onclick="confirmLdapSync()">
+                            <i class="bi bi-cloud-arrow-down me-2 text-info"></i> Sync from LDAP
+                        </button>
+                    </li>
+                    <form id="ldapSyncForm" action="{{ route('employee.sync-ldap') }}" method="POST" class="d-none">
+                        @csrf
+                    </form>
+                    @endif
+                    --}}
                 </ul>
             </div>
         </div>
@@ -446,7 +461,7 @@
                             </li>
                             <li>
                                 <button class="dropdown-item small text-danger"
-                                    onclick="openDeleteModal('{{ route('employee.destroy', $employee->id) }}')">
+                                    onclick="openDeleteModal('{{ route('employee.destroy', $employee->id) }}', true, '<i class=\'bi bi-info-circle-fill me-1\'></i> Yang Dapat Melakukan Remove/Delete Employee Hanya Admin IT Helpdesk. Silahkan Hubungi IT.')">
                                     <i class="bi bi-trash me-2"></i> Delete
                                 </button>
                             </li>
@@ -472,4 +487,27 @@
         </div>
     </div>
 
+    {{-- 
+    <script>
+        function confirmLdapSync() {
+            Swal.fire({
+                title: 'Sync from LDAP?',
+                text: "This will pull and update all employee data from the LDAP server. It might take a moment.",
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#3b82f6',
+                cancelButtonColor: '#94a3b8',
+                confirmButtonText: 'Yes, sync now!',
+                showLoaderOnConfirm: true,
+                didOpen: () => {
+                    // Optional: customize loader
+                },
+                preConfirm: () => {
+                    Swal.showLoading();
+                    document.getElementById('ldapSyncForm').submit();
+                }
+            });
+        }
+    </script>
+    --}}
 @endsection

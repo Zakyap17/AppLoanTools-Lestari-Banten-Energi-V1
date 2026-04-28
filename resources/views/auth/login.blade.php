@@ -75,11 +75,9 @@
         }
 
         .brand-logo {
-            width: 50px;
-            height: 50px;
-            background: white;
-            border-radius: 10px;
-            padding: 8px;
+            width: 80px;
+            height: 80px;
+            background: transparent;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -131,13 +129,10 @@
         }
 
         .company-logo {
-            width: 60px;
-            height: 60px;
+            width: 90px;
+            height: 90px;
             margin: 0 auto 20px;
-            background: white;
-            border-radius: 12px;
-            padding: 10px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            background: transparent;
         }
 
         .company-logo img {
@@ -325,7 +320,7 @@
         <div class="login-left">
             <div class="brand-section">
                 <div class="brand-logo">
-                    <img src="/images/logo_dashboard.png" alt="LBE">
+                    <img src="{{ asset('assets/images/logo-new.png') }}" alt="LBE">
                 </div>
                 <div class="brand-name">PT LBE</div>
             </div>
@@ -341,7 +336,7 @@
         <div class="login-right">
             <div class="form-header">
                 <div class="company-logo">
-                    <img src="/images/favicon.png" alt="TEMS">
+                    <img src="{{ asset('assets/images/logo-new.png') }}" alt="LBE">
                 </div>
                 <h2>Welcome Back</h2>
                 <p>Enter your username and password to access</p>

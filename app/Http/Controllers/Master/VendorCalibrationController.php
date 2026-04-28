@@ -87,6 +87,12 @@ class VendorCalibrationController extends Controller
 
     public function destroy(VendorCalibration $vendors_calibration)
     {
+        $password = request('password_confirmation_val');
+
+        if (!auth()->user()->validatePassword($password)) {
+            return redirect()->back()->with('error', 'Incorrect password. Deletion cancelled.');
+        }
+
         try {
             $vendors_calibration->delete();
             return redirect()->route('vendors-calibration')->with('success', 'Vendor deleted successfully.');

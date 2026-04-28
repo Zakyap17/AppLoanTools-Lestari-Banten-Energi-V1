@@ -32,6 +32,10 @@ Schedule::command('ldap:sync')
     ->timezone('Asia/Jakarta')
     ->everyFifteenMinutes();
 
+Schedule::command('tools:prune')
+    ->timezone('Asia/Jakarta')
+    ->dailyAt('00:00');
+
 // Run queue worker in the background for emails
 Schedule::command('queue:work --stop-when-empty')
     ->everyMinute();

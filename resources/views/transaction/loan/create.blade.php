@@ -59,9 +59,11 @@
                             <div class="col-md-6">
                                 <label class="form-label small fw-semibold text-secondary">Keeper <span class="text-danger">*</span></label>
                                 <select name="keeper_id" class="form-select" required>
-                                    <option value="" selected disabled>Select Keeper</option>
+                                    <option value="" {{ !$detectedKeeperId ? 'selected' : '' }} disabled>Select Keeper</option>
                                     @foreach($employees as $emp)
-                                        <option value="{{ $emp->id }}">{{ $emp->nik }} - {{ $emp->name }}</option>
+                                        <option value="{{ $emp->id }}" {{ $detectedKeeperId == $emp->id ? 'selected' : '' }}>
+                                            {{ $emp->nik }} - {{ $emp->name }}
+                                        </option>
                                     @endforeach
                                 </select>
                             </div>
@@ -224,6 +226,17 @@
                 // ---------------------------
 
                 // --- SELECT2 LOGIC ---
+                // Employee & Keeper Dropdowns
+                $('select[name="employee_id"]').select2({
+                    theme: 'bootstrap-5',
+                    width: '100%'
+                });
+
+                $('select[name="keeper_id"]').select2({
+                    theme: 'bootstrap-5',
+                    width: '100%'
+                });
+
                 $('#toolSelector').select2({
                     theme: 'bootstrap-5',
                     placeholder: 'Type at least 3 characters to search...',

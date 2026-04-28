@@ -238,5 +238,45 @@ Setelah mendapatkan IP statis (misal: `192.168.1.100`), lakukan langkah terakhir
 Buka browser di laptop Anda (bukan di dalam VM) dan ketikkan IP tersebut:
 `http://192.168.1.100`
 
-Selesai! Sistem sekarang dapat diakses secara lokal.
+---
 
+## 9. Melakukan Update (Git Pull)
+
+Jika ada perubahan kode baru di GitHub (misal dari branch `feature/reporting-dashboard`), ikuti langkah ini untuk memperbarui server:
+
+1. **Masuk ke folder aplikasi**:
+   ```bash
+   cd /var/www/html/warehouse-app
+   ```
+
+2. **Tarik perubahan terbaru**:
+   ```bash
+   # Masukkan kredensial GitHub jika diminta
+   sudo git pull origin feature/reporting-dashboard
+   ```
+
+3. **Update dependensi & build asset (jika ada perubahan UI/JS/CSS)**:
+   ```bash
+   composer install --no-dev --optimize-autoloader
+   npm install && npm run build
+   ```
+
+4. **Jalankan migrasi (jika ada perubahan database)**:
+   ```bash
+   php artisan migrate --force
+   ```
+
+5. **Bersihkan & Refresh Cache**:
+   ```bash
+   php artisan config:cache
+   php artisan route:cache
+   php artisan view:cache
+   ```
+
+6. **Pastikan perizinan tetap benar**:
+   ```bash
+   sudo chown -R www-data:www-data /var/www/html/warehouse-app
+   sudo chmod -R 775 /var/www/html/warehouse-app/storage
+   ```
+
+---

@@ -185,7 +185,7 @@
                                         title="Edit">
                                         <i class="bi bi-pencil-square"></i>
                                     </a>
-                                    <button onclick="openDeleteModal('{{ route('locations.destroy', $item->id) }}')"
+                                    <button onclick="openDeleteModal('{{ route('locations.destroy', $item->id) }}', true)"
                                         class="btn btn-sm btn-outline-danger" title="Delete">
                                         <i class="bi bi-trash"></i>
                                     </button>
@@ -222,7 +222,7 @@
                                                                     <i class="bi bi-pencil"></i>
                                                                 </a>
                                                                 <button type="button" class="btn btn-sm btn-outline-danger p-1"
-                                                                    onclick="openDeleteModal('{{ route('racks.destroy', $rack->id) }}')"
+                                                                    onclick="openDeleteModal('{{ route('racks.destroy', $rack->id) }}', true)"
                                                                     title="Delete"
                                                                     style="width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center;">
                                                                     <i class="bi bi-trash" style="font-size: 0.8rem;"></i>

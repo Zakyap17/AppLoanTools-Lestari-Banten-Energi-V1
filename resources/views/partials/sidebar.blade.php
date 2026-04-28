@@ -50,7 +50,7 @@
       {{-- Sidebar Logo (Visible only when Expanded) --}}
       <div id="sidebar-logo-container" class="d-flex align-items-center gap-2 overflow-hidden">
          <img src="{{ asset('assets/images/logo-new.png') }}" alt="Logo" class="img-fluid rounded-3 flex-shrink-0"
-            style="width: 28px; height: 28px;">
+            style="width: 40px; height: 40px;">
          <div class="d-flex flex-column" style="line-height: 1.1;">
             <span class="fw-bold sidebar-logo-text text-truncate"
                style="font-family: 'Inter', sans-serif; letter-spacing: -0.5px; color: #ffffff; font-size: 15px; max-width: 140px; display: block;">

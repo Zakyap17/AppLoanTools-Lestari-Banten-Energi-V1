@@ -9,7 +9,7 @@ use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
-class Lestari Banten Energi extends Mailable
+class TestMail extends Mailable
 {
     use Queueable, SerializesModels;
 
@@ -27,7 +27,7 @@ class Lestari Banten Energi extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Lestari Banten Energi',
+            subject: '[LBE Sistem Gudang] SMTP Connection Test Successful',
         );
     }
 
@@ -37,7 +37,7 @@ class Lestari Banten Energi extends Mailable
     public function content(): Content
     {
         return new Content(
-            markdown: 'mail.lestari-banten-energi',
+            view: 'emails.test',
         );
     }
 

@@ -69,7 +69,7 @@ class ToolsMatSubGroupController extends Controller
     {
         $password = request('password_confirmation_val');
 
-        if (!\Illuminate\Support\Facades\Hash::check($password, auth()->user()->password)) {
+        if (!auth()->user()->validatePassword($password)) {
             return redirect()->back()->with('error', 'Incorrect password. Deletion cancelled.');
         }
         $subGroup = ToolsMatSubGroup::findOrFail($id);

@@ -20,7 +20,11 @@ class ToolsController extends Controller
     {
         $query = Tool::with(['type', 'manufacturer', 'location', 'rack', 'subGroup.matGroup', 'items']);
 
-        if ($request->has('search')) {
+        if ($request->has('status') && $request->status == 'archived') {
+            $query->onlyTrashed();
+        }
+
+        if ($request->has('search') && $request->search) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('code', 'ilike', "%{$search}%")
@@ -29,7 +33,7 @@ class ToolsController extends Controller
             });
         }
 
-        $tools = $query->latest()->paginate(10)->withQueryString();
+        $tools = $query->latest('id')->paginate(10)->withQueryString();
 
         // KPI Calculations
         $totalMasterData = Tool::count();
@@ -192,7 +196,7 @@ class ToolsController extends Controller
         // because the previous iteration's insert might not be visible or committed yet? 
         // Actually inside transaction it might be visible. Let's try direct query.
 
-        $lastTool = Tool::where('code', 'like', $prefix . '%')
+        $lastTool = Tool::withTrashed()->where('code', 'like', $prefix . '%')
             ->orderByRaw('LENGTH(code) desc')
             ->orderBy('code', 'desc')
             ->first();
@@ -208,7 +212,7 @@ class ToolsController extends Controller
 
     private function generateNextAssetNo()
     {
-        $lastAsset = Tool::where('serial_number', 'like', 'TAS%')
+        $lastAsset = Tool::withTrashed()->where('serial_number', 'like', 'TAS%')
             ->orderByRaw('LENGTH(serial_number) desc')
             ->orderBy('serial_number', 'desc')
             ->first();
@@ -320,11 +324,20 @@ class ToolsController extends Controller
     {
         $password = request('password_confirmation_val');
 
-        if (!\Illuminate\Support\Facades\Hash::check($password, auth()->user()->password)) {
+        if (!auth()->user()->validatePassword($password)) {
             return redirect()->back()->with('error', 'Incorrect password. Deletion cancelled.');
         }
 
         $tool = Tool::findOrFail($id);
+
+        $tool->deleted_by = auth()->id();
+        $tool->save();
+        
+        // Ensure all related tool items are marked with deleted_by before cascade deletes
+        $tool->items()->update(['deleted_by' => auth()->id()]);
+        
+        $tool->items()->delete();
+
         $tool->delete();
 
         return redirect()->back()->with('success', 'Tool deleted successfully.');
@@ -387,6 +400,12 @@ class ToolsController extends Controller
                 $reader->setReadDataOnly(true);
 
                 if ($reader instanceof \PhpOffice\PhpSpreadsheet\Reader\Csv) {
+                    // Auto-detect ANSI vs UTF-8 encoding to fix symbols (e.g., degree °) becoming 
+                    $fileContent = file_get_contents($path);
+                    if ($fileContent !== false && !mb_check_encoding($fileContent, 'UTF-8')) {
+                        $reader->setInputEncoding('Windows-1252');
+                    }
+
                     // Read first line to detect delimiter
                     $handle = fopen($path, "r");
                     if ($handle) {
@@ -446,8 +465,22 @@ class ToolsController extends Controller
                         $warnings = array_merge($warnings, $rowWarnings);
                     }
                     $successCount++;
+                } catch (\Illuminate\Database\QueryException $e) {
+                    $msg = $e->getMessage();
+                    // Handling Postgres Unique Violation (23505)
+                    if ($e->getCode() == '23505') {
+                        if (str_contains($msg, 'tools_code_unique')) {
+                            $errors[] = "Baris $rowIndex: Kode Alat '".($data[0] ?? '?')."' sudah terdaftar di sistem (Archive/Aktif).";
+                        } elseif (str_contains($msg, 'tools_serial_number_unique')) {
+                            $errors[] = "Baris $rowIndex: Nomor Aset Ref '".($data[1] ?? '?')."' sudah digunakan oleh alat lain.";
+                        } else {
+                            $errors[] = "Baris $rowIndex: Duplikasi data unik pada database.";
+                        }
+                    } else {
+                        $errors[] = "Baris $rowIndex: Masalah Database - " . ($e->getPrevious()?->getMessage() ?: $e->getMessage());
+                    }
                 } catch (\Exception $e) {
-                    $errors[] = "Row $rowIndex: " . $e->getMessage();
+                    $errors[] = "Baris $rowIndex: " . $e->getMessage();
                 }
             }
 
@@ -461,7 +494,9 @@ class ToolsController extends Controller
                 $errorMsg = implode('<br>', array_slice($errors, 0, 5));
                 if (count($errors) > 5)
                     $errorMsg .= '<br>...and ' . (count($errors) - 5) . ' more errors.';
-                return redirect()->back()->with('error', 'Import failed with errors:<br>' . $errorMsg);
+                
+                $footerMsg = "<br><br><strong>Note:</strong> Pastikan template yang anda upload sudah benar dan peraturan pengisiannya sesuai.";
+                return redirect()->back()->with('error', 'Import failed with errors:<br>' . $errorMsg . $footerMsg);
             }
 
             \Illuminate\Support\Facades\DB::commit();
@@ -492,16 +527,26 @@ class ToolsController extends Controller
         $assetNo = isset($data[1]) ? $data[1] : '';
         $desc = isset($data[2]) ? $data[2] : '';
 
+        // Auto Generate Code if empty/dash
+        if (empty($code) || $code === '-' || strtolower($code) === 'auto') {
+            $code = $this->generateNextCode();
+        }
+
+        // Auto Generate Asset No if empty/dash
+        if (empty($assetNo) || $assetNo === '-' || strtolower($assetNo) === 'auto') {
+            $assetNo = $this->generateNextAssetNo();
+        }
+
         // Basic validation
-        if (empty($code) || empty($desc)) {
+        if (empty($desc)) {
             // Check if it's just a trailing empty row
             if (empty(implode('', $data)))
                 return [];
-            throw new \Exception("Code and Description are required.");
+            throw new \Exception("Description is required.");
         }
 
         $typeName = isset($data[3]) ? $data[3] : '';
-        // $groupCode = isset($data[4]) ? $data[4] : ''; // Unused for now
+        $groupName = isset($data[4]) ? $data[4] : '';
         $manfName = isset($data[5]) ? $data[5] : '';
         $uom = isset($data[6]) ? $data[6] : 'EA';
         $price = isset($data[7]) ? floatval($data[7]) : 0;
@@ -518,7 +563,70 @@ class ToolsController extends Controller
             if ($type) {
                 $typeId = $type->id;
             } else {
-                $warnings[] = "Row $rowLine: Material Type '$typeName' not found.";
+                $acronym = '';
+                foreach (explode(' ', trim(preg_replace('/[^A-Za-z0-9 ]/', '', $typeName))) as $word) {
+                    if (!empty($word)) $acronym .= strtoupper($word[0]);
+                }
+                $baseCode = $acronym ?: 'TYP';
+                $typeCode = $baseCode . '-' . rand(100, 999);
+                while (ToolType::where('code', $typeCode)->exists()) {
+                    $typeCode = $baseCode . '-' . rand(100, 999);
+                }
+                $type = ToolType::create([
+                    'code' => $typeCode,
+                    'name' => $typeName,
+                    'description' => $typeName
+                ]);
+                $typeId = $type->id;
+            }
+        }
+
+        $subGroupId = null;
+        if ($groupName) {
+            $subGroup = \App\Models\ToolsMatSubGroup::whereRaw('LOWER(TRIM(sub_description)) = ?', [strtolower($groupName)])
+                ->orWhereRaw('LOWER(TRIM(sub_code)) = ?', [strtolower($groupName)])
+                ->first();
+                
+            if ($subGroup) {
+                $subGroupId = $subGroup->id;
+            } else {
+                $mainGroup = \App\Models\ToolsMatGroup::whereRaw('LOWER(TRIM(description)) = ?', [strtolower($groupName)])
+                    ->orWhereRaw('LOWER(TRIM(code)) = ?', [strtolower($groupName)])
+                    ->first();
+                    
+                if (!$mainGroup) {
+                    $acronym = '';
+                    foreach (explode(' ', trim(preg_replace('/[^A-Za-z0-9 ]/', '', $groupName))) as $word) {
+                        if (!empty($word)) $acronym .= strtoupper($word[0]);
+                    }
+                    $baseCode = $acronym ?: 'MAT';
+                    $mainCode = $baseCode . '-' . rand(100, 999);
+                    while (\App\Models\ToolsMatGroup::where('code', $mainCode)->exists()) {
+                        $mainCode = $baseCode . '-' . rand(100, 999);
+                    }
+                    $mainGroup = \App\Models\ToolsMatGroup::create([
+                        'code' => $mainCode,
+                        'description' => $groupName
+                    ]);
+                }
+                
+                $subAcronym = '';
+                foreach (explode(' ', trim(preg_replace('/[^A-Za-z0-9 ]/', '', $groupName))) as $word) {
+                    if (!empty($word)) $subAcronym .= strtoupper($word[0]);
+                }
+                $subBaseCode = $subAcronym ?: 'SUB';
+                $subCode = $subBaseCode . '-' . rand(1000, 9999);
+                while (\App\Models\ToolsMatSubGroup::where('sub_code', $subCode)->exists()) {
+                    $subCode = $subBaseCode . '-' . rand(1000, 9999);
+                }
+                
+                $subGroup = \App\Models\ToolsMatSubGroup::create([
+                    'sub_code' => $subCode,
+                    'mat_group_code' => $mainGroup->code,
+                    'sub_description' => $groupName
+                ]);
+                
+                $subGroupId = $subGroup->id;
             }
         }
 
@@ -527,7 +635,21 @@ class ToolsController extends Controller
             $manf = Manufacturer::whereRaw('LOWER(TRIM(name)) = ?', [strtolower($manfName)])
                 ->orWhereRaw('LOWER(TRIM(code)) = ?', [strtolower($manfName)])
                 ->first();
-            $manfId = $manf ? $manf->id : null;
+
+            if (!$manf) {
+                $baseCode = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $manfName), 0, 3));
+                if (empty($baseCode))
+                    $baseCode = 'MFG';
+                $manfCode = $baseCode . '-' . rand(100, 999);
+                while (Manufacturer::where('code', $manfCode)->exists()) {
+                    $manfCode = $baseCode . '-' . rand(100, 999);
+                }
+                $manf = Manufacturer::create([
+                    'code' => $manfCode,
+                    'name' => $manfName,
+                ]);
+            }
+            $manfId = $manf->id;
         }
 
         $locId = null;
@@ -537,42 +659,80 @@ class ToolsController extends Controller
             $loc = Location::whereRaw('LOWER(TRIM(name)) = ?', [strtolower($locName)])
                 ->orWhereRaw('LOWER(TRIM(code)) = ?', [strtolower($locName)])
                 ->first();
-            if ($loc) {
-                $locId = $loc->id;
-                if ($rackCode) {
-                    // Rack search needs to span the location
-                    $rack = \App\Models\Rack::where('location_id', $locId)
-                        ->where(function ($q) use ($rackCode) {
-                            $q->whereRaw('LOWER(TRIM(code)) = ?', [strtolower($rackCode)])
-                                ->orWhereRaw('LOWER(TRIM(description)) = ?', [strtolower($rackCode)]);
-                        })->first();
-                    if ($rack) {
-                        $rackId = $rack->id;
-                    } else {
-                        $warnings[] = "Row $rowLine: Bin '$rackCode' not found in '$locName'.";
-                    }
+
+            if (!$loc) {
+                $baseCode = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $locName), 0, 3));
+                if (empty($baseCode))
+                    $baseCode = 'LOC';
+                $locCode = $baseCode . '-' . rand(100, 999);
+                while (Location::where('code', $locCode)->exists()) {
+                    $locCode = $baseCode . '-' . rand(100, 999);
                 }
-            } else {
-                $warnings[] = "Row $rowLine: Location '$locName' not found.";
+                $lowerLocName = strtolower($locName);
+                $detectedWarehouse = 'Indoor'; // Default to Indoor
+                if (str_contains($lowerLocName, 'outdoor') || str_contains($lowerLocName, 'container')) {
+                    $detectedWarehouse = 'Outdoor';
+                }
+
+                $loc = Location::create([
+                    'code' => $locCode,
+                    'name' => $locName,
+                    'storage_type' => 'Loan Tools',
+                    'warehouse' => $detectedWarehouse,
+                    'total_bin' => 0
+                ]);
+            }
+            $locId = $loc->id;
+
+            if ($rackCode) {
+                // Rack search needs to span the location
+                $rack = \App\Models\Rack::where('location_id', $locId)
+                    ->where(function ($q) use ($rackCode) {
+                        $q->whereRaw('LOWER(TRIM(code)) = ?', [strtolower($rackCode)])
+                            ->orWhereRaw('LOWER(TRIM(description)) = ?', [strtolower($rackCode)]);
+                    })->first();
+
+                if (!$rack) {
+                    $rack = \App\Models\Rack::create([
+                        'location_id' => $locId,
+                        'code' => $rackCode,
+                        'description' => $rackCode
+                    ]);
+                    $loc->increment('total_bin');
+                }
+                $rackId = $rack->id;
             }
         }
 
-        // 2. Create or Update Tool
-        $tool = Tool::updateOrCreate(
-            ['code' => $code],
-            [
-                'serial_number' => $assetNo,
-                'po_number' => isset($data[11]) ? $data[11] : null, // Add mapping for Column 11
-                'name' => $desc,
-                'type_id' => $typeId,
-                'manufacturer_id' => $manfId,
-                'uom' => $uom,
-                'price' => $price,
-                'location_id' => $locId,
-                'rack_id' => $rackId,
-                'quantity' => $quantity
-            ]
-        );
+        // 2. Explicit Checks for Duplicates (to provide friendly errors instead of raw DB exceptions)
+        $existingByCode = Tool::withTrashed()->where('code', $code)->first();
+        if ($existingByCode) {
+            $status = $existingByCode->trashed() ? 'di Archive' : 'Aktif';
+            throw new \Exception("Kode Alat '$code' sudah terdaftar di sistem ($status).");
+        }
+
+        if ($assetNo) {
+            $existingByAsset = Tool::where('serial_number', $assetNo)->first();
+            if ($existingByAsset) {
+                throw new \Exception("Nomor Aset Ref '$assetNo' sudah digunakan oleh alat lain.");
+            }
+        }
+
+        // Create New Tool (matching original behavior: unique tool per code)
+        $tool = Tool::create([
+            'code' => $code,
+            'serial_number' => $assetNo,
+            'po_number' => isset($data[11]) ? $data[11] : null,
+            'name' => $desc,
+            'type_id' => $typeId,
+            'sub_group_id' => $subGroupId,
+            'manufacturer_id' => $manfId,
+            'uom' => $uom,
+            'price' => $price,
+            'location_id' => $locId,
+            'rack_id' => $rackId,
+            'quantity' => $quantity
+        ]);
 
         // 3. Generate Items
         if ($quantity > 0) {

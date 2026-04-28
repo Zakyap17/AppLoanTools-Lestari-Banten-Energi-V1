@@ -49,17 +49,21 @@ class SendCalibrationReminders extends Command
 
         $this->info("Found {$toolsToRemind->count()} tools needing calibration reminders.");
 
-        $mgmtEmails = env('MANAGEMENT_EMAILS');
+        $mgmtEmails = config('mail.management_emails');
         if ($mgmtEmails) {
             try {
-                $emails = array_map('trim', explode(',', $mgmtEmails));
-                $mail = Mail::to($emails[0]);
-
-                if (count($emails) > 1) {
-                    $mail->bcc(array_slice($emails, 1));
+                $emails = array_filter(array_map('trim', explode(',', $mgmtEmails)));
+                if (!empty($emails)) {
+                    $mail = Mail::to($emails[0]);
+                    if (count($emails) > 1) {
+                        $mail->bcc(array_slice($emails, 1));
+                    }
                 }
 
                 $mail->send(new CalibrationReminder($toolsToRemind));
+
+                // Log success
+                \Illuminate\Support\Facades\Log::info("Calibration Reminder dikirim ke: " . implode(', ', $emails));
 
                 // Update the sent timestamp so it isn't sent again today
                 foreach ($toolsToRemind as $tool) {

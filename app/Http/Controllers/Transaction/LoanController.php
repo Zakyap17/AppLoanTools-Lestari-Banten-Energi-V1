@@ -25,7 +25,7 @@ class LoanController extends Controller
         $codes = $query->latest('loan_code')->paginate(10)->withQueryString();
 
         // 2. Fetch All Loan Items matching these codes
-        $allLoans = \App\Models\Loan::with(['tool.location', 'tool.rack', 'borrower', 'keeper', 'item'])
+        $allLoans = \App\Models\Loan::with(['tool' => function($q) { $q->withTrashed()->with(['location', 'rack']); }, 'borrower', 'keeper', 'item'])
             ->whereIn('loan_code', $codes->pluck('loan_code'))
             ->get()
             ->groupBy('loan_code');
@@ -48,11 +48,25 @@ class LoanController extends Controller
         // Pass empty tools collection for AJAX
         $tools = collect();
 
+        // Auto-detect Keeper based on currently logged-in user
+        $user = auth()->user();
+        $detectedKeeperId = null;
+
+        if ($user) {
+            $employee = \App\Models\Employee::where('nik', $user->username)
+                ->orWhere('name', 'ilike', $user->name)
+                ->first();
+            
+            if ($employee) {
+                $detectedKeeperId = $employee->id;
+            }
+        }
+
         // Generate Doc No: LOAN-YYYYMMDD-XXXX
         $count = \App\Models\Loan::whereDate('created_at', today())->count() + 1;
         $docNo = 'LOAN-' . date('Ymd') . '-' . str_pad($count, 4, '0', STR_PAD_LEFT);
 
-        return view('transaction.loan.create', compact('employees', 'docNo', 'tools'));
+        return view('transaction.loan.create', compact('employees', 'docNo', 'tools', 'detectedKeeperId'));
     }
 
     public function store(Request $request)
@@ -158,10 +172,12 @@ class LoanController extends Controller
                     $mail = Mail::to($borrower->email);
 
                     // Add Management BCC
-                    $mgmtEmails = env('MANAGEMENT_EMAILS');
+                    $mgmtEmails = config('mail.management_emails');
                     if ($mgmtEmails) {
-                        $emails = array_map('trim', explode(',', $mgmtEmails));
-                        $mail->bcc($emails);
+                        $emails = array_filter(array_map('trim', explode(',', $mgmtEmails)));
+                        if (!empty($emails)) {
+                            $mail->bcc($emails);
+                        }
                     }
 
                     $mail->queue(new LoanCreated([
@@ -197,15 +213,25 @@ class LoanController extends Controller
         $term = '%' . $search . '%';
 
         // Using lowercase 'ilike' for consistency with other working controllers
-        $tools = \App\Models\Tool::with([
-            'items' => function ($q) {
+        $query = \App\Models\Tool::query();
+
+        if ($request->has('include_trashed')) {
+            $query->withTrashed()->with(['items' => function ($q) {
+                $q->withTrashed();
+            }]);
+        } else {
+            $query->with(['items' => function ($q) {
                 $q->where('status', 'available');
-            }
-        ])
-            ->where(function ($q) use ($term) {
+            }]);
+        }
+
+        $tools = $query->where(function ($q) use ($term, $request) {
                 $q->where('code', 'ilike', $term)
                     ->orWhere('name', 'ilike', $term)
-                    ->orWhereHas('items', function ($sub) use ($term) {
+                    ->orWhereHas('items', function ($sub) use ($term, $request) {
+                        if ($request->has('include_trashed')) {
+                            $sub->withTrashed();
+                        }
                         $sub->where('serial_number', 'ilike', $term);
                     });
             })
@@ -360,7 +386,7 @@ class LoanController extends Controller
 
     public function print($loanCode)
     {
-        $loans = \App\Models\Loan::with(['tool', 'borrower', 'keeper', 'item'])
+        $loans = \App\Models\Loan::with(['tool' => function($q) { $q->withTrashed(); }, 'borrower', 'keeper', 'item'])
             ->where('loan_code', $loanCode)
             ->get();
 

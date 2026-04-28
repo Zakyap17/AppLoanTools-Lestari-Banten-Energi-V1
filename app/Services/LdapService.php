@@ -9,7 +9,9 @@ class LdapService
 
     public function __construct()
     {
-        $this->baseDn = env('LDAP_BASE_DN');
+        $dnString = config('services.ldap.base_dn');
+        // Mendukung multiple Base DN dipisah titik koma (;)
+        $this->baseDn = array_filter(array_map('trim', explode(';', $dnString)));
     }
 
     /**
@@ -17,13 +19,15 @@ class LdapService
      */
     protected function connect()
     {
-        $host = env('LDAP_HOST');
-        $port = env('LDAP_PORT', 389);
+        $host = config('services.ldap.host', '127.0.0.1');
+        $port = config('services.ldap.port', 389);
         $protocol = ($port == 636) ? 'ldaps://' : 'ldap://';
+        $uri = $protocol . $host . ':' . $port;
 
-        $this->connection = \ldap_connect($protocol . $host, $port);
+        // Fix Deprecation: use URL instead of host/port arguments
+        $this->connection = \ldap_connect($uri);
 
-        if (env('LDAP_IGNORE_CERT', false)) {
+        if (config('services.ldap.ignore_cert', false)) {
             putenv('LDAPTLS_REQCERT=never');
         }
 
@@ -59,16 +63,24 @@ class LdapService
     protected function findUserDn($username)
     {
         $conn = $this->connect();
-        $adminUser = env('LDAP_ADMIN_USER');
-        $adminPass = env('LDAP_ADMIN_PASS');
+        $adminUser = config('services.ldap.admin_user');
+        $adminPass = config('services.ldap.admin_pass');
 
         if (@\ldap_bind($conn, $adminUser, $adminPass)) {
             $filter = "(samaccountname=$username)";
-            $search = \ldap_search($conn, $this->baseDn, $filter, ['dn']);
-            $entries = \ldap_get_entries($conn, $search);
+            foreach ($this->baseDn as $dn) {
+                try {
+                    $search = @\ldap_search($conn, $dn, $filter, ['dn']);
 
-            if ($entries['count'] > 0) {
-                return $entries[0]['dn'];
+                    if ($search) {
+                        $entries = @\ldap_get_entries($conn, $search);
+                        if ($entries !== false && $entries['count'] > 0) {
+                            return $entries[0]['dn'];
+                        }
+                    }
+                } catch (\Throwable $e) {
+                    // Mencegah aplikasi crash jika Base DN tidak valid / No such object, go to next
+                }
             }
         }
 
@@ -81,27 +93,84 @@ class LdapService
     public function getAllUsers()
     {
         $conn = $this->connect();
-        $adminUser = env('LDAP_ADMIN_USER');
-        $adminPass = env('LDAP_ADMIN_PASS');
+        $adminUser = config('services.ldap.admin_user');
+        $adminPass = config('services.ldap.admin_pass');
 
         if (@\ldap_bind($conn, $adminUser, $adminPass)) {
-            $filter = "(objectClass=user)";
-            $attributes = ['samaccountname', 'cn', 'name', 'mail', 'objectguid', 'dn'];
-            $search = \ldap_search($conn, $this->baseDn, $filter, $attributes);
-            $entries = \ldap_get_entries($conn, $search);
+            \Log::info("LDAP Bind successful for admin user: " . $adminUser);
 
             $users = [];
-            for ($i = 0; $i < $entries['count']; $i++) {
-                $users[] = [
-                    'username' => $entries[$i]['samaccountname'][0] ?? null,
-                    'name' => $entries[$i]['cn'][0] ?? $entries[$i]['name'][0] ?? null,
-                    'email' => $entries[$i]['mail'][0] ?? null,
-                    'guid' => bin2hex($entries[$i]['objectguid'][0]) ?? null,
-                ];
+            $seenGuids = [];
+
+            foreach ($this->baseDn as $dn) {
+                \Log::info("Searching LDAP in Base DN: " . $dn);
+
+                $pageSize = 1000;
+                $cookie = '';
+
+                $filter = "(objectClass=user)";
+                $attributes = ['samaccountname', 'cn', 'name', 'mail', 'objectguid', 'dn', 'employeeid', 'department', 'title', 'telephonenumber', 'extensionattribute1', 'description'];
+
+                do {
+                    try {
+                        // Set paging control
+                        @\ldap_control_paged_result($conn, $pageSize, true, $cookie);
+
+                        $search = @\ldap_search($conn, $dn, $filter, $attributes);
+
+                        if ($search) {
+                            $entries = @\ldap_get_entries($conn, $search);
+                            if ($entries !== false) {
+                                for ($i = 0; $i < $entries['count']; $i++) {
+                                    $entry = $entries[$i];
+
+                                    // GUID binary
+                                    $guid = isset($entry['objectguid'][0]) ? bin2hex($entry['objectguid'][0]) : null;
+
+                                    // Skip jika sudah diproses
+                                    if ($guid && in_array($guid, $seenGuids))
+                                        continue;
+                                    if ($guid)
+                                        $seenGuids[] = $guid;
+
+                                    // Fallback username
+                                    $username = $entry['samaccountname'][0] ?? $entry['cn'][0] ?? $entry['name'][0] ?? null;
+
+                                    // NIK detection: employeeid -> extensionattribute1 -> description -> FALLBACK: Username
+                                    $nik = $entry['employeeid'][0]
+                                        ?? $entry['extensionattribute1'][0]
+                                        ?? $entry['description'][0]
+                                        ?? $username; // Use username as unique identifier if NIK is missing
+
+                                    $users[] = [
+                                        'username' => $username,
+                                        'name' => $entry['cn'][0] ?? $entry['name'][0] ?? $username,
+                                        'email' => $entry['mail'][0] ?? null,
+                                        'guid' => $guid,
+                                        'nik' => $nik,
+                                        'department' => $entry['department'][0] ?? '-',
+                                        'position' => $entry['title'][0] ?? '-',
+                                        'phone' => $entry['telephonenumber'][0] ?? null,
+                                        'raw_keys' => array_keys($entry)
+                                    ];
+                                }
+                            }
+
+                            // Get cookie for next page
+                            @\ldap_control_paged_result_response($conn, $search, $cookie);
+                        } else {
+                            $cookie = null;
+                        }
+                    } catch (\Throwable $e) {
+                        \Log::error("LDAP Search error in DN {$dn}: " . $e->getMessage());
+                        $cookie = null;
+                    }
+                } while ($cookie !== null && $cookie != '');
             }
             return $users;
         }
 
+        \Log::error("LDAP Bind failed for admin user: " . $adminUser . " Error: " . \ldap_error($conn));
         return [];
     }
 
@@ -111,22 +180,31 @@ class LdapService
     public function getUserByUsername($username)
     {
         $conn = $this->connect();
-        $adminUser = env('LDAP_ADMIN_USER');
-        $adminPass = env('LDAP_ADMIN_PASS');
+        $adminUser = config('services.ldap.admin_user');
+        $adminPass = config('services.ldap.admin_pass');
 
         if (@\ldap_bind($conn, $adminUser, $adminPass)) {
             $filter = "(&(objectClass=user)(samaccountname=$username))";
             $attributes = ['samaccountname', 'cn', 'name', 'mail', 'objectguid', 'dn'];
-            $search = \ldap_search($conn, $this->baseDn, $filter, $attributes);
-            $entries = \ldap_get_entries($conn, $search);
 
-            if ($entries['count'] > 0) {
-                return [
-                    'username' => $entries[0]['samaccountname'][0] ?? null,
-                    'name' => $entries[0]['cn'][0] ?? $entries[0]['name'][0] ?? null,
-                    'email' => $entries[0]['mail'][0] ?? null,
-                    'guid' => bin2hex($entries[0]['objectguid'][0]) ?? null,
-                ];
+            foreach ($this->baseDn as $dn) {
+                try {
+                    $search = @\ldap_search($conn, $dn, $filter, $attributes);
+
+                    if ($search) {
+                        $entries = @\ldap_get_entries($conn, $search);
+                        if ($entries !== false && $entries['count'] > 0) {
+                            return [
+                                'username' => $entries[0]['samaccountname'][0] ?? null,
+                                'name' => $entries[0]['cn'][0] ?? $entries[0]['name'][0] ?? null,
+                                'email' => $entries[0]['mail'][0] ?? null,
+                                'guid' => bin2hex($entries[0]['objectguid'][0]) ?? null,
+                            ];
+                        }
+                    }
+                } catch (\Throwable $e) {
+                    // Mencegah crash jika LDAP error, try next DN
+                }
             }
         }
 

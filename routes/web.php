@@ -41,6 +41,20 @@ Route::get('/logout', [LoginController::class, 'logout']); // Fallback for GET r
 // Keep-alive endpoint to refresh session
 Route::post('/keep-alive', [LoginController::class, 'keepAlive'])->middleware('auth');
 
+Route::get('/test-email', function () {
+    $to = request('to');
+    if (!$to) {
+        return "Tolong tambahkan tujuan email. Contoh: /test-email?to=nama@gmail.com";
+    }
+
+    try {
+        \Illuminate\Support\Facades\Mail::to($to)->send(new \App\Mail\TestMail());
+        return "Berhasil mengirim email percobaan ke " . $to . "! Coba cek inbox atau folder Spam.";
+    } catch (\Exception $e) {
+        return "Gagal mengirim email: " . $e->getMessage();
+    }
+});
+
 /* Authenticated Routes */
 Route::middleware(['auth'])->group(function () {
     /* Change Password */
@@ -54,8 +68,8 @@ Route::middleware(['auth'])->group(function () {
     /*Dashboard*/
     Route::get('/dashboard', [DashboardController::class, 'index'])
         ->name('dashboard');
-
-
+    Route::post('/dashboard/clear-notifications', [DashboardController::class, 'clearNotifications'])
+        ->name('notifications.clear');
     /* Master Tools */
     // Locations
     Route::get('/locations/template', [LocationsController::class, 'template'])->name('locations.template');
@@ -176,6 +190,10 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/receive', [ReceiveController::class, 'index'])
         ->name('receive');
 
+    Route::get('/calibration-issuing/template', [CalibrationIssuingController::class, 'template'])
+        ->name('calibration-issuing.template');
+    Route::post('/calibration-issuing/import', [CalibrationIssuingController::class, 'import'])
+        ->name('calibration-issuing.import');
     Route::get('/calibration-issuing', [CalibrationIssuingController::class, 'index'])
         ->name('calibration-issuing');
     Route::get('/calibration-issuing/create', [CalibrationIssuingController::class, 'create'])
@@ -201,6 +219,7 @@ Route::middleware(['auth'])->group(function () {
     /* Employee */
     Route::get('/employee/template', [EmployeeController::class, 'template'])->name('employee.template');
     Route::post('/employee/import', [EmployeeController::class, 'import'])->name('employee.import');
+    Route::post('/employee/sync-ldap', [EmployeeController::class, 'syncFromLdap'])->name('employee.sync-ldap');
     Route::resource('/employee', EmployeeController::class)
         ->names([
             'index' => 'employee.index',

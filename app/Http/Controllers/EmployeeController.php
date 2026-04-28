@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Employee;
+use App\Services\LdapService;
 use Illuminate\Http\Request;
 
 class EmployeeController extends Controller
@@ -90,10 +91,26 @@ class EmployeeController extends Controller
      */
     public function destroy(string $id)
     {
-        $employee = Employee::findOrFail($id);
-        $employee->delete();
+        $password = request('password_confirmation_val');
 
-        return redirect()->route('employee.index')->with('success', 'Employee deleted successfully.');
+        if (!auth()->user()->validatePassword($password)) {
+            return redirect()->back()->with('error', 'Incorrect password. Deletion cancelled.');
+        }
+
+        $employee = Employee::findOrFail($id);
+
+        try {
+            $employee->delete();
+            return redirect()->route('employee.index')->with('success', 'Employee deleted successfully.');
+        } catch (\Illuminate\Database\QueryException $e) {
+            // Check if it's a constraint violation
+            if ($e->getCode() == "23000") {
+                return redirect()->back()->with('error', 'Cannot delete employee. They are referenced in existing loans or transactions.');
+            }
+            return redirect()->back()->with('error', 'An error occurred during deletion: ' . $e->getMessage());
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'An error occurred during deletion: ' . $e->getMessage());
+        }
     }
 
     public function template()
@@ -160,6 +177,49 @@ class EmployeeController extends Controller
 
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Import failed: ' . $e->getMessage());
+        }
+    }
+
+    public function syncFromLdap(LdapService $ldap)
+    {
+        try {
+            $users = $ldap->getAllUsers();
+            $totalFound = count($users);
+            \Log::info("LDAP Sync: Total users found in AD: " . $totalFound);
+
+            if ($totalFound > 0) {
+                \Log::info("Sample User from LDAP: " . json_encode($users[0]));
+            }
+
+            $count = 0;
+            $skipped = 0;
+
+            foreach ($users as $user) {
+                // We only sync if they have a NIK (employeeid)
+                if (empty($user['nik'])) {
+                    $skipped++;
+                    continue;
+                }
+
+                Employee::updateOrCreate(
+                    ['nik' => $user['nik']],
+                    [
+                        'name' => $user['name'],
+                        'email' => $user['email'],
+                        'department' => $user['department'] ?? '-',
+                        'position' => $user['position'] ?? '-',
+                        'phone' => $user['phone'] ?? null,
+                    ]
+                );
+                $count++;
+            }
+
+            \Log::info("LDAP Sync Result: Updated {$count}, Skipped {$skipped}");
+
+            return redirect()->back()->with('success', "Synchronized {$count} employees from LDAP successfully. (Total found: {$totalFound}, Skipped: {$skipped})");
+        } catch (\Exception $e) {
+            \Log::error("LDAP Sync Controller Error: " . $e->getMessage());
+            return redirect()->back()->with('error', 'LDAP Sync failed: ' . $e->getMessage());
         }
     }
 }

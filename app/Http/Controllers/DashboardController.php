@@ -8,9 +8,28 @@ use Carbon\Carbon;
 
 class DashboardController extends Controller
 {
+    public function clearNotifications(Request $request)
+    {
+        $type = $request->input('type', 'all');
+        $ids = $request->input('ids', []);
+        
+        $dismissed = session()->get('dismissed_notifications', []);
+        
+        if ($type === 'all') {
+            foreach (['overdue', 'low_stock', 'calibration'] as $cat) {
+                if (isset($ids[$cat])) {
+                    $dismissed[$cat] = array_unique(array_merge($dismissed[$cat] ?? [], $ids[$cat]));
+                }
+            }
+        }
+        
+        session()->put('dismissed_notifications', $dismissed);
+        
+        return response()->json(['success' => true]);
+    }
+
     public function index()
     {
-        // Fetch pending loans (status = 'ongoing')
         // Fetch pending loans (status = 'ongoing')
         // Grouped by loan_code to prevent duplicate entries for multi-item loans
         $pendingLoans = \App\Models\Loan::with(['borrower', 'tool'])

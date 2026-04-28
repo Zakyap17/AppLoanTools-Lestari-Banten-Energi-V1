@@ -11,14 +11,14 @@ class TestEmailTemplates extends Command
      *
      * @var string
      */
-    protected $signature = 'test:send-emails {email : The recipient email address} {--type=all : The type of email (created, reminder, overdue, all)}';
+    protected $signature = 'test:send-emails {email : The recipient email address} {--type=all : The type of email (created, reminder, overdue, calibration, all)} {--sync : Send emails synchronously bypassing the queue}';
 
     /**
      * The console command description.
      *
      * @var string
      */
-    protected $description = 'Send dummy emails for verification. Usage: --type=created|reminder|overdue|all';
+    protected $description = 'Send dummy emails for verification. Usage: --type=created|reminder|overdue|calibration|all';
 
     /**
      * Execute the console command.
@@ -30,6 +30,8 @@ class TestEmailTemplates extends Command
 
         $this->info("Target: $email");
         $this->info("Mode: " . ucfirst($type));
+
+        $isSync = $this->option('sync');
 
         if ($type === 'all' || $type === 'created') {
             $this->info("1. Sending Loan Confirmation...");
@@ -52,7 +54,8 @@ class TestEmailTemplates extends Command
                     ]
                 ]
             ];
-            \Illuminate\Support\Facades\Mail::to($email)->send(new \App\Mail\LoanCreated($loanDetails));
+            $mailable = new \App\Mail\LoanCreated($loanDetails);
+            $isSync ? \Illuminate\Support\Facades\Mail::to($email)->sendNow($mailable) : \Illuminate\Support\Facades\Mail::to($email)->send($mailable);
             $this->info("   -> Sent.");
             if ($type === 'all')
                 sleep(2);
@@ -65,8 +68,8 @@ class TestEmailTemplates extends Command
             $loanMock = new \stdClass();
             $loanMock->loan_code = 'LOAN-TEST-002';
             $loanMock->loan_quantity = 2;
-            $loanMock->loan_date = '2023-01-01';
-            $loanMock->expected_return_date = '2023-01-08';
+            $loanMock->loan_date = \Carbon\Carbon::parse('2023-01-01');
+            $loanMock->expected_return_date = \Carbon\Carbon::parse('2023-01-08');
 
             $loanMock->borrower = new \stdClass();
             $loanMock->borrower->name = 'Jane Doe (Test)';
@@ -75,7 +78,8 @@ class TestEmailTemplates extends Command
             $loanMock->tool->name = 'Safety Harness Kit';
             $loanMock->tool->code = 'SAFETY-005';
 
-            \Illuminate\Support\Facades\Mail::to($email)->send(new \App\Mail\LoanReminder(collect([$loanMock]), 3));
+            $mailable = new \App\Mail\LoanReminder(collect([$loanMock]), 3);
+            $isSync ? \Illuminate\Support\Facades\Mail::to($email)->sendNow($mailable) : \Illuminate\Support\Facades\Mail::to($email)->send($mailable);
             $this->info("   -> Sent.");
             if ($type === 'all')
                 sleep(2);
@@ -89,8 +93,8 @@ class TestEmailTemplates extends Command
                 $loanMock = new \stdClass();
                 $loanMock->loan_code = 'LOAN-TEST-XXX';
                 $loanMock->loan_quantity = 1;
-                $loanMock->loan_date = '2023-01-01';
-                $loanMock->expected_return_date = '2023-01-08';
+                $loanMock->loan_date = \Carbon\Carbon::parse('2023-01-01');
+                $loanMock->expected_return_date = \Carbon\Carbon::parse('2023-01-08');
                 $loanMock->borrower = new \stdClass();
                 $loanMock->borrower->name = 'Jane Doe (Test)';
                 $loanMock->tool = new \stdClass();
@@ -109,11 +113,30 @@ class TestEmailTemplates extends Command
             $overdueLoan2->tool->name = 'Welding Machine';
             $overdueLoan2->item = null;
             $overdueLoan2->tool_item_id = null;
-            $overdueLoan2->expected_return_date = '2023-05-20'; // Very late
+            $overdueLoan2->expected_return_date = \Carbon\Carbon::parse('2023-05-20'); // Very late
 
             $loans = collect([$overdueLoan1, $overdueLoan2]);
 
-            \Illuminate\Support\Facades\Mail::to($email)->send(new \App\Mail\OverdueLoanNotification('Jane Doe (Test)', $loans));
+            $mailable = new \App\Mail\OverdueLoanNotification('Jane Doe (Test)', $loans);
+            $isSync ? \Illuminate\Support\Facades\Mail::to($email)->sendNow($mailable) : \Illuminate\Support\Facades\Mail::to($email)->send($mailable);
+            $this->info("   -> Sent.");
+            if ($type === 'all')
+                sleep(2);
+        }
+
+        if ($type === 'all' || $type === 'calibration') {
+            $this->info("4. Sending Calibration Reminder...");
+
+            $toolMock = new \stdClass();
+            $toolMock->tool_name = 'Digital Micrometer';
+            $toolMock->tool_id = 'MEASURE-001';
+            $toolMock->serial_number = 'SN-999-CAL';
+            $toolMock->next_calibration_date = \Carbon\Carbon::parse(date('Y-m-d', strtotime('+5 days')));
+
+            $tools = collect([$toolMock]);
+
+            $mailable = new \App\Mail\CalibrationReminder($tools);
+            $isSync ? \Illuminate\Support\Facades\Mail::to($email)->sendNow($mailable) : \Illuminate\Support\Facades\Mail::to($email)->send($mailable);
             $this->info("   -> Sent.");
         }
 
